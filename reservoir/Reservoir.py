@@ -46,7 +46,6 @@ class Reservoir:
         self.inputWeight = np.random.rand(self.Nx, self.Nu)
         self.inputWeight = self.inputWeight - self.inputScaling
 
-
     def __generateReservoirWeight(self):
         #Choose a uniform distribution
         #TODO: Normalize ?
@@ -90,7 +89,7 @@ class Reservoir:
         statesN, resD = self.internalState.shape
         internalState = self.internalState[statesN -1]
 
-        testOutputData = []
+        testOutputData = np.zeros((testInputN, self.outputD))
 
         for t in range(testInputN):
             #reservoir activation
@@ -100,7 +99,7 @@ class Reservoir:
 
             #compute output
             output = np.dot(self.outputWeight, internalState)
-            testOutputData.append(output)
+            testOutputData[t, :] = output
 
         return testOutputData
 

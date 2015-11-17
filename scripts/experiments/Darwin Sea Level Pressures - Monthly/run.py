@@ -11,10 +11,10 @@ from performance import RootMeanSquareError as rmse
 import numpy as np
 
 #Read data from the file
-data = np.loadtxt('MackeyGlass_t17.txt')
+data = np.loadtxt('darwin.slp.txt')
 
 #Input data - get 2000 points
-nTraining = 2000
+nTraining = 1000
 inputData = np.hstack((np.ones((nTraining, 1)),data[:nTraining].reshape((nTraining, 1))))
 
 #Output data
@@ -24,16 +24,16 @@ outputData = data[1:nTraining+1].reshape((nTraining, 1))
 reservoirObj = []
 predictedOutput = []
 error = []
-nTesting = 2000
+nTesting = 300
 testInputData = np.hstack((np.ones((nTesting, 1)),data[nTraining:nTraining+nTesting].reshape((nTesting, 1))))
 testActualOutputData = data[nTraining+1:nTraining+nTesting+1].reshape((nTesting, 1))
 errorFunction = rmse.RootMeanSquareError()
-sizes = range(50, 200, 50)
+sizes = range(10, 50, 10)
 
 
 for i in sizes:
     #Train
-    res = reservoir.Reservoir(size = i, spectralRadius = 1.25, inputScaling = 0.5, leakingRate = 0.3, initialTransient = 100, inputData = inputData, outputData = outputData)
+    res = reservoir.Reservoir(size = i, spectralRadius = 0.95, inputScaling = 0.5, leakingRate = 0.3, initialTransient = 5, inputData = inputData, outputData = outputData)
     res.trainReservoir()
     reservoirObj.append(res)
 
@@ -46,10 +46,10 @@ for i in sizes:
 
 
 #Plotting of the prediction output and error
-outplot = outputPlot.OutputPlot("Outputs/Prediction.html", "Mackey-Glass Time Series", "Comparison of different echo state networks", "Time", "Output")
+outplot = outputPlot.OutputPlot("Outputs/Prediction.html", "Darwin Sea Level Pressure Prediction", "Comparison of different echo state networks", "Time", "Sea Level Pressure")
 outplot.setXSeries(np.arange(1, nTesting + 1))
 outplot.setYSeries('Actual Output', testActualOutputData[:nTesting, 0])
-errplot = errorPlot.ErrorPlot("Outputs/RegressionError.html", "Mackey-Glass Time Series", "Comparison of different echo state networks", "ESN Configuration", "Root Mean Square Error")
+errplot = errorPlot.ErrorPlot("Outputs/RegressionError.html", "Darwin Sea Level Pressure Prediction", "Comparison of different echo state networks", "ESN Configuration", "Root Mean Square Error")
 
 xAxis = []
 for i in range(len(reservoirObj)):
@@ -62,3 +62,7 @@ outplot.createOutput()
 errplot.setXAxis(np.array(xAxis))
 errplot.setYAxis('Total Regression Error', np.array(error))
 errplot.createOutput()
+
+
+
+

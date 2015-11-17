@@ -1,0 +1,3 @@
+Monthly values of the Darwin SLP series, from 1882 to 1998.
+This series is a key indicator of climatological patterns and has been used in a range of studies related to El Nino and the SOI.
+There is also a smoothed/interpolated version that has been used in some studies.
