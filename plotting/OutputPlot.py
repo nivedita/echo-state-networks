@@ -16,10 +16,11 @@ class OutputPlot:
         #Initialization to hold series data
         self.seriesName = []
         self.seriesData = []
+        self.seriesToolTip = []
         self.xAxis = None
 
 
-    def setYSeries(self, name, data):
+    def setYSeries(self, name, data, tooltipText=""):
         #Set the name
         self.seriesName.append(name)
 
@@ -30,6 +31,20 @@ class OutputPlot:
 
         dataText = dataText[0:len(dataText) - 1]
         self.seriesData.append(dataText)
+
+        #Set the tooltip
+        self.seriesToolTip.append(tooltipText)
+
+    def setSingleDataPoint(self, name, x, y, toolTipText=""):
+        #Set the name
+        self.seriesName.append(name)
+
+        #Set the data
+        dataText = "[" + str(x) + "," + str(y) + "]"
+        self.seriesData.append(dataText)
+
+        #Set the tooltip
+        self.seriesToolTip.append("'" + toolTipText + "'")
 
     def setXSeries(self, data):
         dataText = ""
@@ -86,7 +101,11 @@ class OutputPlot:
         seriesData = ""
         for i in range(length):
             seriesData = seriesData + "{name:'" + self.seriesName[i] + "',"
-            seriesData = seriesData + "data: [" + self.seriesData[i] + "]},"
+            seriesData = seriesData + "data: [" + self.seriesData[i] + "],"
+
+            if(self.seriesToolTip[i] != ""):
+                seriesData = seriesData + "tooltip:{pointFormatter: function (){return " + self.seriesToolTip[i] + ";}}"
+            seriesData = seriesData + "},"
         seriesData = seriesData[0:len(seriesData)-1]
 
         self.f.write("\nseries: ["+seriesData+"]")

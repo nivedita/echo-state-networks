@@ -16,8 +16,6 @@ data = np.loadtxt('darwin.slp.txt')
 #Input data - get 2000 points
 nTraining = 1000
 inputData = np.hstack((np.ones((nTraining, 1)),data[:nTraining].reshape((nTraining, 1))))
-
-#Output data
 outputData = data[1:nTraining+1].reshape((nTraining, 1))
 
 #Train, Predict and Measure

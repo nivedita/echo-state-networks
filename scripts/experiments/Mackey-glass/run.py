@@ -28,12 +28,13 @@ nTesting = 2000
 testInputData = np.hstack((np.ones((nTesting, 1)),data[nTraining:nTraining+nTesting].reshape((nTesting, 1))))
 testActualOutputData = data[nTraining+1:nTraining+nTesting+1].reshape((nTesting, 1))
 errorFunction = rmse.RootMeanSquareError()
-sizes = range(50, 200, 50)
+spectralRadius = range(85, 135, 10)
 
 
-for i in sizes:
+for i in spectralRadius:
+    rad = i/100
     #Train
-    res = reservoir.Reservoir(size = i, spectralRadius = 1.25, inputScaling = 0.5, leakingRate = 0.3, initialTransient = 100, inputData = inputData, outputData = outputData)
+    res = reservoir.Reservoir(size = 128, spectralRadius = rad, inputScaling = 0.02, leakingRate = 0.3, initialTransient = 100, inputData = inputData, outputData = outputData)
     res.trainReservoir()
     reservoirObj.append(res)
 
@@ -53,11 +54,11 @@ errplot = errorPlot.ErrorPlot("Outputs/RegressionError.html", "Mackey-Glass Time
 
 xAxis = []
 for i in range(len(reservoirObj)):
-    seriesName = "Predicted Output for ESN with " + str(reservoirObj[i].Nx) +" nodes"
+    seriesName = "Predicted Output for ESN with spectral radius " + str(reservoirObj[i].spectralRadius)
     seriesData = predictedOutput[i][:nTesting, 0]
     outplot.setYSeries(seriesName, seriesData)
 
-    xAxis.append("With " +str(reservoirObj[i].Nx) + " nodes")
+    xAxis.append("With spectral radius " +str(reservoirObj[i].spectralRadius))
 outplot.createOutput()
 errplot.setXAxis(np.array(xAxis))
 errplot.setYAxis('Total Regression Error', np.array(error))
