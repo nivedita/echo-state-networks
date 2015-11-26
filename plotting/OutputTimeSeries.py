@@ -1,10 +1,13 @@
 import numpy as np
 
 class OutputTimeSeriesPlot:
-    def __init__(self, fileName, title, subTitle, yAxisText):
+
+
+    def __init__(self, fileName, title, subTitle, yAxisText, type="datetime"):
         self.title = title
         self.subTitle = subTitle
         self.yAxisText = yAxisText
+        self.type = type
         self.f = open(fileName, 'w')
         self.f.write('\n<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js"></script>')
         self.f.write('\n<script src="https://code.highcharts.com/highcharts.js"></script>')
@@ -12,21 +15,25 @@ class OutputTimeSeriesPlot:
         self.f.write('\n<meta http-equiv="content-type" content="text/html; charset=utf-8"></meta>')
         self.f.write('\n<div id="container" style="min-width: 310px; height: 400px; margin: 0 auto"></div>')
 
-        #Initialization to hold series data
+        # Initialization to hold series data
         self.seriesName = []
         self.seriesData = []
+        self.seriesToolTip = []
 
-    def setSeries(self, name, xData, yData):
-        #Set the name
+    def setSeries(self, name, xData, yData, toolTipText=""):
+        # Set the name
         self.seriesName.append(name)
 
-        #Set the data
+        # Set the data
         dataText = ""
         for i in range(xData.size):
             dataText = dataText + "[" + str(xData[i]) + "," + str(yData[i]) + "],"
 
         dataText = dataText[0:len(dataText) - 1]
         self.seriesData.append(dataText)
+
+        #Set the tooltip
+        self.seriesToolTip.append(toolTipText)
 
     def createOutput(self):
         # This is where all the html(javascript) file is produced
@@ -35,26 +42,30 @@ class OutputTimeSeriesPlot:
         self.f.write("\n$(function () {")
         self.f.write("\n$('#container').highcharts({")
         self.f.write("\n    chart: {")
-        self.f.write("\n        zoomType: 'x'")
+        self.f.write("\n        zoomType: 'xy'")
         self.f.write("\n    },")
         self.f.write("\n    title: {")
         self.f.write("\n        text: '"+self.title+"'")
         self.f.write("\n    },")
         self.f.write("\n    subtitle: {")
         self.f.write("\n        text: ")
-        self.f.write("\n                'Cool'")
+        self.f.write("\n                '"+self.subTitle+"'")
         self.f.write("\n    },")
-        self.f.write("\n    xAxis: {")
-        self.f.write("\n        type: 'datetime'")
-        self.f.write("\n    },")
+        if (self.type == "datetime"):
+            self.f.write("\n    xAxis: {")
+            self.f.write("\n        type: 'datetime'")
+            self.f.write("\n    },")
         self.f.write("\n    yAxis: {")
         self.f.write("\n        title: {")
         self.f.write("\n            text: '"+self.yAxisText+"'")
         self.f.write("\n        }")
         self.f.write("\n    },")
         self.f.write("\n    legend: {")
-        self.f.write("\n        enabled: false")
+        self.f.write("\n        enabled: true")
         self.f.write("\n    },")
+        self.f.write("credits: {")
+        self.f.write("    enabled: false")
+        self.f.write("},")
         self.f.write("\n    plotOptions: {")
         self.f.write("\n        area: {")
         self.f.write("\n            fillColor: {")
@@ -89,6 +100,10 @@ class OutputTimeSeriesPlot:
             seriesData = seriesData + "{name:'" + self.seriesName[i] + "',"
             seriesData = seriesData + "type:'line',"
             seriesData = seriesData + "data: [" + self.seriesData[i] + "],"
+
+            #if(self.seriesToolTip[i] != ""):
+                #seriesData = seriesData + "tooltip:{pointFormatter: function (){return " + self.seriesToolTip[i] + ";}}"
+
             seriesData = seriesData + "},"
         seriesData = seriesData[0:len(seriesData)-1]
 

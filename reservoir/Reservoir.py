@@ -4,7 +4,7 @@ import scipy.linalg as la
 import scipy.sparse.linalg as sla
 
 class Reservoir:
-    def __init__(self, size, spectralRadius, inputScaling, leakingRate, initialTransient, inputData, outputData):
+    def __init__(self, size, spectralRadius, inputScaling, leakingRate, initialTransient, inputData, outputData, inputWeightRandom = None, reservoirWeightRandom = None):
         """
 
         :param Nx: size of the reservoir
@@ -31,31 +31,36 @@ class Reservoir:
         self.reservoirWeight = np.zeros((self.Nx, self.Nx))
         self.outputWeight = np.zeros((self.Ny, self.Nx))
 
+        if(inputWeightRandom == None):
+            self.inputWeightRandom = np.random.rand(self.Nx, self.Nu)
+        else:
+            self.inputWeightRandom = inputWeightRandom
+        if(reservoirWeightRandom == None):
+            self.reservoirWeightRandom = np.random.rand(self.Nx, self.Nx)
+        else:
+            self.reservoirWeightRandom = reservoirWeightRandom
+
         #Generate the input and reservoir weights
         self.__generateInputWeight()
         self.__generateReservoirWeight()
 
         #Internal states
         self.internalState = np.zeros((self.inputN-self.initialTransient, self.Nx))
+        self.latestInternalState = None
 
 
     def __generateInputWeight(self):
         #Choose a uniform distribution and adjust it according to the input scaling
         #ie. the values are chosen from [-inputScaling, +inputScaling]
         #TODO: Normalize ?
-        self.inputWeight = np.random.rand(self.Nx, self.Nu)
+        self.inputWeight = self.inputWeightRandom
         self.inputWeight = self.inputWeight - self.inputScaling
 
     def __generateReservoirWeight(self):
         #Choose a uniform distribution
         #TODO: Normalize ?
-        self.reservoirWeight = np.random.rand(self.Nx, self.Nx)
+        self.reservoirWeight = self.reservoirWeightRandom
         self.reservoirWeight = self.reservoirWeight - self.inputScaling
-
-        # # simulate an Erdos Ryeni network by creating matrix of probabilities
-        # # and use these probabilities to suppress weights in W
-        # M = np.random.rand(self.Nx,self.Nx)
-        # self.reservoirWeight[M>0.1] = 0.
 
         #Make the reservoir weight matrix - a unit spectral radius
         rad = np.max(np.abs(la.eigvals(self.reservoirWeight)))
@@ -72,7 +77,7 @@ class Reservoir:
         for t in range(self.inputN):
             term1 = np.dot(self.inputWeight,self.inputData[t])
             term2 = np.dot(self.reservoirWeight,internalState)
-            internalState = (1-self.leakingRate)*internalState + self.leakingRate*np.tanh(term1 + term2)
+            internalState = (1.0-self.leakingRate)*internalState + self.leakingRate*np.tanh(term1 + term2)
             if t >= self.initialTransient:
                 self.internalState[t-self.initialTransient] = internalState
 
@@ -81,13 +86,18 @@ class Reservoir:
         B = self.outputData[self.initialTransient:, :]
 
         #Solve for x in Ax = B
-        self.outputWeight = sla.lsmr(A, B, damp=1e-8)[0]
+        for d in range(self.outputD):
+            B = self.outputData[self.initialTransient:, d]
+            self.outputWeight[d, :] = sla.lsmr(A, B, damp=1e-8)[0]
 
     def predict(self, testInputData):
 
         testInputN, testInputD = testInputData.shape
         statesN, resD = self.internalState.shape
-        internalState = self.internalState[statesN -1]
+        if(self.latestInternalState == None):
+            internalState = self.internalState[statesN -1]
+        else:
+            internalState = self.latestInternalState
 
         testOutputData = np.zeros((testInputN, self.outputD))
 
@@ -100,6 +110,8 @@ class Reservoir:
             #compute output
             output = np.dot(self.outputWeight, internalState)
             testOutputData[t, :] = output
+
+        self.latestInternalState = internalState
 
         return testOutputData
 
