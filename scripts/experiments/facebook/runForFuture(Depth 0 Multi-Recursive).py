@@ -11,23 +11,25 @@ from datetime import datetime
 import numpy as np
 import os
 from datetime import date, timedelta
+from timeseries import TimeSeries as ts
 
 # Read data from the file
 rawData = np.loadtxt("facebookFansHistory_bmw_raw.txt", delimiter=',')
 
 data = rawData[:rawData.shape[0], rawData.shape[1] -1].reshape((rawData.shape[0], 1))
 
-# Train with the entire data
-nTraining = data.shape[0] - 1
+depth = 0
+horizon = 1
+tsp = ts.TimeSeriesProcessor(rawData, depth, horizon, 4)
+processedData = tsp.getProcessedData()
 
-
-inputData = np.hstack((np.ones((nTraining, 1)),data[:nTraining].reshape((nTraining, 1))))
-outputData = data[1:nTraining+1].reshape((nTraining, 1))
+inputData = np.hstack((np.ones((processedData.shape[0], 1)),processedData[:processedData.shape[0],:depth+1]))
+outputData = processedData[:processedData.shape[0],depth+1:horizon+1]
 
 # Train
 inputWeightRandom = np.load("Outputs/inputWeight.npy")
 reservoirWeightRandom = np.load("Outputs/reservoirWeight.npy")
-res = reservoir.Reservoir(size=600, spectralRadius=1.25, inputScaling=0.55, leakingRate=0.30, initialTransient=0, inputData=inputData, outputData=outputData, inputWeightRandom=inputWeightRandom, reservoirWeightRandom=reservoirWeightRandom)
+res = reservoir.Reservoir(size=600, spectralRadius=0.95, inputScaling=0.20, leakingRate=0.30, initialTransient=0, inputData=inputData, outputData=outputData, inputWeightRandom = inputWeightRandom, reservoirWeightRandom = reservoirWeightRandom)
 res.trainReservoir()
 
 #Predict for past
