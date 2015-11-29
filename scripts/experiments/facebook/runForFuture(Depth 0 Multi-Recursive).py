@@ -18,18 +18,18 @@ rawData = np.loadtxt("facebookFansHistory_bmw_raw.txt", delimiter=',')
 
 data = rawData[:rawData.shape[0], rawData.shape[1] -1].reshape((rawData.shape[0], 1))
 
-depth = 0
+depth = 1
 horizon = 1
 tsp = ts.TimeSeriesProcessor(rawData, depth, horizon, 4)
 processedData = tsp.getProcessedData()
 
-inputData = np.hstack((np.ones((processedData.shape[0], 1)),processedData[:processedData.shape[0],:depth+1]))
-outputData = processedData[:processedData.shape[0],depth+1:horizon+1]
+inputData = np.hstack((np.ones((processedData.shape[0], 1)),processedData[:processedData.shape[0],:depth]))
+outputData = processedData[:processedData.shape[0],depth:depth+horizon]
 
 # Train
 inputWeightRandom = np.load("Outputs/inputWeight.npy")
 reservoirWeightRandom = np.load("Outputs/reservoirWeight.npy")
-res = reservoir.Reservoir(size=600, spectralRadius=0.95, inputScaling=0.20, leakingRate=0.30, initialTransient=0, inputData=inputData, outputData=outputData, inputWeightRandom = inputWeightRandom, reservoirWeightRandom = reservoirWeightRandom)
+res = reservoir.Reservoir(size=600, spectralRadius=1.25, inputScaling=0.50, leakingRate=0.20, initialTransient=0, inputData=inputData, outputData=outputData, inputWeightRandom = inputWeightRandom, reservoirWeightRandom = reservoirWeightRandom)
 res.trainReservoir()
 
 #Predict for past

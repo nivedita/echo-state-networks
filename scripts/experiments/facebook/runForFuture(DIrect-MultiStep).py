@@ -11,75 +11,58 @@ from datetime import datetime
 import numpy as np
 import os
 from datetime import date, timedelta
+from timeseries import TimeSeries as ts
 
 # Read data from the file
 rawData = np.loadtxt("facebookFansHistory_bmw_raw.txt", delimiter=',')
-data = rawData[:rawData.shape[0], rawData.shape[1] -1].reshape((rawData.shape[0], 1))
 
-# Train with the entire data
-nTraining = data.shape[0] - 1
+# Set the cut off point for training
+# For instance, let's test the horizon points
+# So, split last horizon points at the end
+depth = 300
+horizon = 30
+cutOffIndex = rawData.shape[0] - horizon
+dataForTraining = rawData[:cutOffIndex, :]
+dataForTesting = rawData[cutOffIndex:, :]
 
-# Input and Output Data
-inputData = np.hstack((np.ones((nTraining, 1)),data[:nTraining].reshape((nTraining, 1))))
-outputData = data[1:nTraining+1].reshape((nTraining, 1))
+valueIndex = 4
+tsp = ts.TimeSeriesProcessor(dataForTraining, depth, horizon, valueIndex)
+processedData = tsp.getProcessedData()
 
-# Train
 inputWeightRandom = np.load("Outputs/inputWeight.npy")
 reservoirWeightRandom = np.load("Outputs/reservoirWeight.npy")
-res = reservoir.Reservoir(size=600, spectralRadius=1.25, inputScaling=0.55, leakingRate=0.30, initialTransient=0, inputData=inputData, outputData=outputData, inputWeightRandom=inputWeightRandom, reservoirWeightRandom=reservoirWeightRandom)
+inputData = np.hstack((np.ones((processedData.shape[0], 1)),processedData[:processedData.shape[0],:depth]))
+outputData = processedData[:processedData.shape[0],depth:depth+horizon]
+
+# Train
+res = reservoir.Reservoir(size=100, spectralRadius=1.00, inputScaling=0.10, leakingRate=0.3, initialTransient=50, inputData=inputData, outputData=outputData)
 res.trainReservoir()
 
+#Predict for future
+#Compose the query
+query = [1.0]
+depthValues = range(depth, 0, -1)
+for d in depthValues:
+    query.append(rawData[cutOffIndex - d, valueIndex])
 
+testPredictedOutputData = res.predict(np.array(query).reshape((1, 1+depth)))
 
+#Create the needed lists for plotting
+xAxis = []
+testActualOutputData = rawData[cutOffIndex:, valueIndex]
 
-#Predict for past
-lastDayIndex = 0
-lastDayValue = rawData[lastDayIndex, 4]
-
-xAxisPast = []
-testPredictedOutputDataPast = []
-testActualOutputDataPast = []
-numberOfDaysInPast = rawData.shape[0]-1
-for i in range(numberOfDaysInPast):
-    nextDayIndex = lastDayIndex + 1
-    nextDay = "Date.UTC(" + str(int(rawData[nextDayIndex, 0])) +","+ str(int(rawData[nextDayIndex, 1]) -1) + "," + str(int(rawData[nextDayIndex, 2])) +")"
-    nextDayValue = rawData[nextDayIndex, 4]
-    nextDayPred = res.predict(np.array([1.0, lastDayValue]).reshape((1, 2)))
-
-    # Add it to the list
-    xAxisPast.append(nextDay)
-    testActualOutputDataPast.append(nextDayValue)
-    testPredictedOutputDataPast.append(nextDayPred[0,0])
-
-    lastDayIndex = nextDayIndex
-    lastDayValue = nextDayValue
-
-
-#Predict for future - for 90 days in advance
-lastIndex = rawData.shape[0] - 1
-lastDay = date(int(rawData[lastIndex, 0]), int(rawData[lastIndex, 1]), int(rawData[lastIndex, 2]))
-lastDayValue = rawData[lastIndex, 4]
-
-xAxisFuture = []
-testPredictedOutputDataFuture = []
-numberOfDaysInFuture = 90
-for i in range(numberOfDaysInFuture):
-    nextDay = lastDay + timedelta(days=1)
-    nextDayPred = res.predict(np.array([1.0, lastDayValue]).reshape((1, 2)))
-
-    # Add it to the list
-    xAxisFuture.append("Date.UTC(" + str(nextDay.year) +","+ str(nextDay.month -1) + "," + str(nextDay.day) +")")
-    testPredictedOutputDataFuture.append(nextDayPred[0, 0])
-
-    lastDay = nextDay
-    lastDayValue = nextDayPred[0, 0]
+index = cutOffIndex
+while index < rawData.shape[0]:
+    day = "Date.UTC(" + str(int(rawData[index, 0])) +","+ str(int(rawData[index, 1]) -1) + "," + str(int(rawData[index, 2])) +")"
+    xAxis.append(day)
+    index += 1
 
 # Plotting of the actual and prediction output
 outputFolderName = "Outputs" + str(datetime.now())
 os.mkdir(outputFolderName)
 outplot = outTimePlot.OutputTimeSeriesPlot(outputFolderName + "/Prediction.html", "Likes count for facebook page-BMW", "", "Likes Count")
-outplot.setSeries('Actual Output', np.array(xAxisPast), np.array(testActualOutputDataPast))
-outplot.setSeries('Predicted Output', np.array(xAxisPast+xAxisFuture), np.array(testPredictedOutputDataPast+testPredictedOutputDataFuture))
+outplot.setSeries('Actual Output', np.array(xAxis), testActualOutputData)
+outplot.setSeries('Predicted Output', np.array(xAxis), testPredictedOutputData.reshape((horizon, 1))[ :,0])
 outplot.createOutput()
 
 # Save the input weight and reservoir weight
