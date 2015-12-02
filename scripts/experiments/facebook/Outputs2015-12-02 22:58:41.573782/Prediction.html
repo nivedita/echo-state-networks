@@ -1,0 +1,60 @@
+
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js"></script>
+<script src="https://code.highcharts.com/highcharts.js"></script>
+<script src="https://code.highcharts.com/modules/exporting.js"></script>
+<meta http-equiv="content-type" content="text/html; charset=utf-8"></meta>
+<div id="container" style="min-width: 310px; height: 400px; margin: 0 auto"></div>
+<script>
+$(function () {
+$('#container').highcharts({
+    chart: {
+        zoomType: 'xy'
+    },
+    title: {
+        text: 'Likes count for facebook page-BMW'
+    },
+    subtitle: {
+        text: 
+                ''
+    },
+    xAxis: {
+        type: 'datetime'
+    },
+    yAxis: {
+        title: {
+            text: 'Likes Count'
+        }
+    },
+    legend: {
+        enabled: true
+    },credits: {    enabled: false},
+    plotOptions: {
+        area: {
+            fillColor: {
+                linearGradient: {
+                    x1: 0,
+                    y1: 0,
+                    x2: 0,
+                    y2: 1
+                },
+                stops: [
+                    [0, Highcharts.getOptions().colors[0]],
+                    [1, Highcharts.Color(Highcharts.getOptions().colors[0]).setOpacity(0).get('rgba')]
+                ]
+            },
+            marker: {
+                radius: 2
+            },
+            lineWidth: 1,
+            states: {
+                hover: {
+                    lineWidth: 1
+                }
+            },
+            threshold: null
+        }
+    },
+series: [{name:'Actual Output',type:'line',data: [[Date.UTC(2015,9,26),1967.0],[Date.UTC(2015,9,27),-454.0],[Date.UTC(2015,9,28),1186.0],[Date.UTC(2015,9,29),1381.0],[Date.UTC(2015,9,30),1129.0],[Date.UTC(2015,9,31),1154.0],[Date.UTC(2015,10,1),1849.0],[Date.UTC(2015,10,2),1423.0],[Date.UTC(2015,10,3),1445.0],[Date.UTC(2015,10,4),1154.0],[Date.UTC(2015,10,5),1233.0],[Date.UTC(2015,10,6),1648.0],[Date.UTC(2015,10,7),1705.0],[Date.UTC(2015,10,8),1698.0],[Date.UTC(2015,10,9),1628.0],[Date.UTC(2015,10,10),1362.0],[Date.UTC(2015,10,11),946.0],[Date.UTC(2015,10,12),1000.0],[Date.UTC(2015,10,13),1125.0],[Date.UTC(2015,10,14),1030.0],[Date.UTC(2015,10,15),1615.0],[Date.UTC(2015,10,16),780.0],[Date.UTC(2015,10,17),843.0],[Date.UTC(2015,10,18),866.0],[Date.UTC(2015,10,19),877.0],[Date.UTC(2015,10,20),980.0],[Date.UTC(2015,10,21),1260.0],[Date.UTC(2015,10,22),1583.0],[Date.UTC(2015,10,23),1268.0],[Date.UTC(2015,10,24),918.0]],},{name:'Predicted Output',type:'line',data: [[Date.UTC(2015,9,26),4983.34907567],[Date.UTC(2015,9,27),4064.85465251],[Date.UTC(2015,9,28),4449.78790867],[Date.UTC(2015,9,29),4924.60873919],[Date.UTC(2015,9,30),5082.21395446],[Date.UTC(2015,9,31),5223.48703713],[Date.UTC(2015,10,1),5299.98126807],[Date.UTC(2015,10,2),5452.8041173],[Date.UTC(2015,10,3),5607.26312304],[Date.UTC(2015,10,4),5741.06635061],[Date.UTC(2015,10,5),5833.56380667],[Date.UTC(2015,10,6),5835.67473147],[Date.UTC(2015,10,7),5873.78793763],[Date.UTC(2015,10,8),5974.82405341],[Date.UTC(2015,10,9),6081.55698727],[Date.UTC(2015,10,10),6174.31203166],[Date.UTC(2015,10,11),6349.06005756],[Date.UTC(2015,10,12),6519.01404446],[Date.UTC(2015,10,13),6602.03945082],[Date.UTC(2015,10,14),6699.44789276],[Date.UTC(2015,10,15),6721.72248264],[Date.UTC(2015,10,16),6731.50419551],[Date.UTC(2015,10,17),6813.20598647],[Date.UTC(2015,10,18),6886.95056354],[Date.UTC(2015,10,19),6907.60043188],[Date.UTC(2015,10,20),7045.41011294],[Date.UTC(2015,10,21),7096.73465493],[Date.UTC(2015,10,22),7174.84597593],[Date.UTC(2015,10,23),7306.36234176],[Date.UTC(2015,10,24),7507.17749818]],}]
+});
+});
+</script>
