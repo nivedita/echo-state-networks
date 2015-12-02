@@ -32,13 +32,13 @@ class Reservoir:
         self.outputWeight = np.zeros((self.Ny, self.Nx))
 
         if(inputWeightRandom == None):
-            #self.inputWeightRandom = np.random.rand(self.Nx, self.Nu)
-            self.inputWeightRandom = np.random.normal(0.0, self.inputScaling * 2.0, (self.Nx, self.Nu))
+            self.inputWeightRandom = np.random.rand(self.Nx, self.Nu)
+            #self.inputWeightRandom = np.random.normal(0.0, self.inputScaling * 2.0, (self.Nx, self.Nu))
         else:
             self.inputWeightRandom = inputWeightRandom
         if(reservoirWeightRandom == None):
-            #self.reservoirWeightRandom = np.random.rand(self.Nx, self.Nx)
-            self.reservoirWeightRandom = np.random.normal(0.0, self.inputScaling * 2.0, (self.Nx, self.Nx))
+            self.reservoirWeightRandom = np.random.rand(self.Nx, self.Nx)
+            #self.reservoirWeightRandom = np.random.normal(0.0, self.inputScaling * 2.0, (self.Nx, self.Nx))
         else:
             self.reservoirWeightRandom = reservoirWeightRandom
 
@@ -56,13 +56,13 @@ class Reservoir:
         #ie. the values are chosen from [-inputScaling, +inputScaling]
         #TODO: Normalize ?
         self.inputWeight = self.inputWeightRandom
-        #self.inputWeight = self.inputWeight - self.inputScaling
+        self.inputWeight = self.inputWeight - self.inputScaling
 
     def __generateReservoirWeight(self):
         #Choose a uniform distribution
         #TODO: Normalize ?
         self.reservoirWeight = self.reservoirWeightRandom
-        #self.reservoirWeight = self.reservoirWeight - self.inputScaling
+        self.reservoirWeight = self.reservoirWeight - self.inputScaling
 
         #Make the reservoir weight matrix - a unit spectral radius
         rad = np.max(np.abs(la.eigvals(self.reservoirWeight)))
@@ -97,7 +97,7 @@ class Reservoir:
         testInputN, testInputD = testInputData.shape
         statesN, resD = self.internalState.shape
         if(self.latestInternalState == None):
-            internalState = self.internalState[statesN -1]
+            internalState = np.zeros(self.Nx)
         else:
             internalState = self.latestInternalState
 
@@ -116,9 +116,6 @@ class Reservoir:
         self.latestInternalState = internalState
 
         return testOutputData
-
-
-
 
 
 

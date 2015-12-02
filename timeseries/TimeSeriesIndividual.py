@@ -1,5 +1,5 @@
 import numpy as np
-class TimeSeriesProcessor:
+class TimeSeriesProcessorIndividual:
 
     def __init__(self, inputData, depth, horizon):
         self.inputData = inputData
@@ -8,8 +8,8 @@ class TimeSeriesProcessor:
 
     def __generate__(self):
         # Create the dataset as numpy array
-        rowCount = self.inputData.shape[0] - self.depth - self.horizon + 1
-        colCount = self.depth + self.horizon #1 for current value
+        rowCount = (self.inputData.shape[0] - self.depth - self.horizon + 1)
+        colCount = self.depth + 1 #Since it just a t + 1 prediction
         processedData = np.zeros((rowCount, colCount))
 
         index = self.depth
@@ -23,10 +23,7 @@ class TimeSeriesProcessor:
                 colCount += 1
 
             # Future values
-            horizonValues = range(0, self.horizon, 1)
-            for horizon in horizonValues:
-                processedData[dataCount, colCount] = self.inputData[index + horizon]
-                colCount += 1
+            processedData[dataCount, colCount] = self.inputData[index + self.horizon-1]
 
             index += 1
             dataCount += 1
@@ -39,5 +36,6 @@ class TimeSeriesProcessor:
 
 if __name__ == "__main__":
     rawData = np.loadtxt("testData.txt", delimiter=',')
-    tsp = TimeSeriesProcessor(rawData, 3, 4, 4)
+    tsp = TimeSeriesProcessorIndividual(rawData[:,4], 3, 3)
     processedData = tsp.getProcessedData()
+    print ("Test Done!")

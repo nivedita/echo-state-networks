@@ -2,7 +2,7 @@ from random import shuffle
 import numpy as np
 import scipy.special as spspec
 import matplotlib.pyplot as plt
-from plotting import OutputPlot as outPlot
+from plotting import OutputTimeSeries as outPlot
 from random import shuffle
 
 class GammaGenerator:
@@ -12,7 +12,7 @@ class GammaGenerator:
         self.pParamList = p
 
         #Output plot
-        self.plot = outPlot.OutputPlot("Gammafunctions.html", "Gamma function", "with different parameters", "x", "f(x)")
+        self.plot = outPlot.OutputTimeSeriesPlot("Gammafunctions.html", "Gamma function", "with different parameters", "f(x)", "")
 
     def generate(self, X, fileName):
         f = open(fileName, 'w')
@@ -24,7 +24,7 @@ class GammaGenerator:
                 for p in self.pParamList:
                     #calulate the result
                     y = self.gengamma_pdf(X, a, d, p)
-                    self.plot.setYSeries("a = " + str(a) + ",d = " + str(d) + ",p = " + str(p), y)
+                    self.plot.setSeries("a = " + str(a) + ",d = " + str(d) + ",p = " + str(p), X, y)
 
                     #Generate the dataset
                     for i in range(X.shape[0]):
@@ -36,8 +36,6 @@ class GammaGenerator:
         #write to the data file
         for item in result:
             f.write(item)
-
-        self.plot.setXSeries(X)
 
         #return the plot object
         return self.plot
