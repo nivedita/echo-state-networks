@@ -66,3 +66,5 @@ target/
 
 #Ds store
 *.DS_Store
+
+*.pyc

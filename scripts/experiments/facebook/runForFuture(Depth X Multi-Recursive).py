@@ -118,7 +118,7 @@ for i in range(horizon):
 predicted = minMax.inverse_transform(np.array(predictedOutput))
 
 # Plotting of the actual and prediction output
-outputFolderName = "Outputs" + str(datetime.now())
+outputFolderName = "Outputs" + str(datetime.now()) + "_depth_" + str(depth) + "_horizon_" + str(horizon)
 os.mkdir(outputFolderName)
 outplot = outTimePlot.OutputTimeSeriesPlot(outputFolderName + "/Prediction.html", "Likes count for facebook page-BMW", "", "Likes Count")
 outplot.setSeries('Actual Output', np.array(xAxis), actualData)
