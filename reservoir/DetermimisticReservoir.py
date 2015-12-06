@@ -4,20 +4,21 @@ import scipy.linalg as la
 import scipy.sparse.linalg as sla
 
 class DeterministicReservoir:
-    def __init__(self, size, inputWeight_r, reservoirWeight_w, inputData, outputData, leakingRate, initialTransient):
+    def __init__(self, size, inputWeight_v, reservoirWeight_r, inputWeightScaling, inputData, outputData, leakingRate, initialTransient):
         """
 
         :param size: size of the reservoir
-        :param inputWeight_r: r of the input weight
+        :param inputWeight_v: v of the input weight
         :param reservoirWeight_r: w of the reservoir weight
         :param inputData: input data (N X D)
         :param outputData: output data (N X D)
         :param leakingRate: leaking rate of the reservoir
-        :param initialTransient: burin/warmp/washout time
+        :param initialTransient: burnin/warmp/washout time
         """
         self.Nx = size
-        self.inputWeight_r = inputWeight_r
-        self.reservoirWeight_r = reservoirWeight_w
+        self.inputWeight_v = inputWeight_v
+        self.reservoirWeight_r = reservoirWeight_r
+        self.inputWeightScaling = inputWeightScaling
         self.leakingRate = leakingRate
         self.initialTransient = initialTransient
         self.inputData = inputData
@@ -46,6 +47,11 @@ class DeterministicReservoir:
 
     def __generateReservoirWeight(self):
         #TODO: How to generate the weights for this minimum complexity ESN
+
+        #Implement Simple Cycle Reservoir
+        for i in range(0, self.Nx-1):
+            self.reservoirWeight[i+1, i] = self.reservoirWeight_r
+
 
     #I hope the training and predicting reservoirs are same as in standard ESN
     def trainReservoir(self):
