@@ -11,13 +11,13 @@ chart: {
     type: 'bar'
 },
 title: {
-    text: 'Darwin Sea Level Pressure Prediction'
+    text: 'Comparison of standard vs deterministic'
 },
 subtitle: {
-    text: 'Comparison of different echo state networks'
+    text: 'with different parameters'
 },
 xAxis: {
-   categories: ['With 10 nodes','With 20 nodes','With 30 nodes','With 40 nodes'],
+   categories: ['DLR','DLRB','SCR','Standard'],
     title: {
         text: 'ESN Configuration'
     }
@@ -25,7 +25,7 @@ xAxis: {
 yAxis: {
     min: 0,
     title: {
-        text: 'Root Mean Square Error',
+        text: 'Total Error',
         align: 'middle'
     },
     labels: {
@@ -56,7 +56,7 @@ legend: {
 credits: {
 enabled: false
 },
-series: [{name:'Total Regression Error',data: [1.86567700734,1.24627082822,1.1148376446,1.05577763712]}]
+series: [{name:'RMSE',data: [9.591560196,9.55590486944,9.61422029102,9.62409309688]}]
 });
 });
 </script>
