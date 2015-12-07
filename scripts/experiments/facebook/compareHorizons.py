@@ -142,7 +142,7 @@ for horizon in horizonList:
 # Plotting of the actual and prediction output
 outputFolderName = "Outputs" + str(datetime.now()) + "_horizon_comparison_"+"_depth_" + str(100)
 os.mkdir(outputFolderName)
-outplot = outTimePlot.OutputTimeSeriesPlot(outputFolderName + "/Prediction.html", "Comparison of prediction outputs", "with varying depths", "Likes Count")
+outplot = outTimePlot.OutputTimeSeriesPlot(outputFolderName + "/Prediction.html", "Comparison of prediction outputs", "with varying horizons", "Likes Count")
 outplot.setSeries('Actual Output', np.array(xAxis), actualData)
 for horizon in horizonList:
     seriesName = 'Predicted_Output_horizon' + str(horizon)

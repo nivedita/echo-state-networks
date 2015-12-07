@@ -1,23 +1,57 @@
 
 import numpy as np
-import scipy.linalg as la
 import scipy.sparse.linalg as sla
+from sympy.mpmath import mp
+
+#Delay Line Reservoir
+class ReservoirTopologyDLR:
+    def __init__(self, reservoirWeight):
+        self.r = reservoirWeight
+
+    def generateWeightMatrix(self, Nx):
+        reservoirWeightMatrix = np.zeros((Nx, Nx))
+        for i in range(0, Nx-1):
+            reservoirWeightMatrix[i+1, i] = self.r
+        return reservoirWeightMatrix
+
+#Delay Line Reservoir with feedback
+class ReservoirTopologyDLRB:
+    def __init__(self, reservoirForwardWeight, reservoirFeedbackWeight):
+        self.r = reservoirForwardWeight
+        self.b = reservoirFeedbackWeight
+
+    def generateWeightMatrix(self, Nx):
+        reservoirWeightMatrix = np.zeros((Nx, Nx))
+        for i in range(0, Nx-1):
+            reservoirWeightMatrix[i+1, i] = self.r
+            reservoirWeightMatrix[i, i+1] = self.b
+        return reservoirWeightMatrix
+
+#Simple Cycle Reservoir
+class ReservoirTopologySCR:
+    def __init__(self, reservoirWeight):
+        self.r = reservoirWeight
+
+    def generateWeightMatrix(self, Nx):
+        reservoirWeightMatrix = np.zeros((Nx, Nx))
+        for i in range(0, Nx-1):
+            reservoirWeightMatrix[i+1, i] = self.r
+        reservoirWeightMatrix[0, Nx-1] = self.r
+        return reservoirWeightMatrix
 
 class DeterministicReservoir:
-    def __init__(self, size, inputWeight_v, reservoirWeight_r, inputWeightScaling, inputData, outputData, leakingRate, initialTransient):
+    def __init__(self, size, inputWeight_v, inputWeightScaling, inputData, outputData, leakingRate, initialTransient, reservoirTopology):
         """
 
         :param size: size of the reservoir
         :param inputWeight_v: v of the input weight
-        :param reservoirWeight_r: w of the reservoir weight
-        :param inputData: input data (N X D)
-        :param outputData: output data (N X D)
+        :param inputData: input training data (N X D)
+        :param outputData: output training data (N X D)
         :param leakingRate: leaking rate of the reservoir
-        :param initialTransient: burnin/warmp/washout time
+        :param initialTransient: warmup time
         """
         self.Nx = size
         self.inputWeight_v = inputWeight_v
-        self.reservoirWeight_r = reservoirWeight_r
         self.inputWeightScaling = inputWeightScaling
         self.leakingRate = leakingRate
         self.initialTransient = initialTransient
@@ -33,6 +67,13 @@ class DeterministicReservoir:
         self.reservoirWeight = np.zeros((self.Nx, self.Nx))
         self.outputWeight = np.zeros((self.Ny, self.Nx))
 
+        #Constant - pi for sign generation
+        mp.dps = self.Nx+2 # number of digits
+        self.pi = str(mp.pi)[2:]
+
+        #Reservoir Topology
+        self.reservoirTopology = reservoirTopology
+
         #Generate the input and reservoir weights
         self.__generateInputWeight()
         self.__generateReservoirWeight()
@@ -41,19 +82,21 @@ class DeterministicReservoir:
         self.internalState = np.zeros((self.inputN-self.initialTransient, self.Nx))
         self.latestInternalState = None
 
-
     def __generateInputWeight(self):
         #TODO: How to generate the weights for this mimimum complexity ESN
+        for i in range(self.Nu):
+            for d in range(self.Nx):
+                if 0 <= int(self.pi[d]) <= 4:
+                    self.inputWeight[d, i] = -1.0 * self.inputWeight_v
+                if 5 <= int(self.pi[d]) <= 9:
+                    self.inputWeight[d, i] = 1.0 * self.inputWeight_v
+
+        #Input scaling
+        self.inputWeight = self.inputWeight - self.inputWeightScaling
 
     def __generateReservoirWeight(self):
-        #TODO: How to generate the weights for this minimum complexity ESN
+        self.reservoirWeight = self.reservoirTopology.generateWeightMatrix(self.Nx)
 
-        #Implement Simple Cycle Reservoir
-        for i in range(0, self.Nx-1):
-            self.reservoirWeight[i+1, i] = self.reservoirWeight_r
-
-
-    #I hope the training and predicting reservoirs are same as in standard ESN
     def trainReservoir(self):
 
         internalState = np.zeros(self.Nx)
