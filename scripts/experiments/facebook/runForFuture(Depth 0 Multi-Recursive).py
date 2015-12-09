@@ -29,7 +29,7 @@ outputData = processedData[:processedData.shape[0],depth:depth+horizon]
 # Train
 inputWeightRandom = np.load("Outputs/inputWeight.npy")
 reservoirWeightRandom = np.load("Outputs/reservoirWeight.npy")
-res = reservoir.Reservoir(size=600, spectralRadius=1.25, inputScaling=0.50, leakingRate=0.20, initialTransient=0, inputData=inputData, outputData=outputData, inputWeightRandom = inputWeightRandom, reservoirWeightRandom = reservoirWeightRandom)
+res = reservoir.Reservoir(size=600, spectralRadius=1.25, inputScaling=0.50, reservoirScaling=0.50, leakingRate=0.20, initialTransient=0, inputData=inputData, outputData=outputData, inputWeightRandom = inputWeightRandom, reservoirWeightRandom = reservoirWeightRandom)
 res.trainReservoir()
 
 #Predict for past

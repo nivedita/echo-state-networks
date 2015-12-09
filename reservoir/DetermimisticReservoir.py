@@ -69,7 +69,7 @@ class DeterministicReservoir:
 
         #Constant - pi for sign generation
         mp.dps = self.Nx+2 # number of digits
-        self.pi = str(mp.pi)[2:]
+        self.pi = str(mp.e)[2:]
 
         #Reservoir Topology
         self.reservoirTopology = reservoirTopology

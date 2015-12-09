@@ -28,7 +28,7 @@ outputData = data[1:nTraining+1].reshape((nTraining, 1))
 #Train
 inputWeightRandom = np.load("Outputs/inputWeight.npy")
 reservoirWeightRandom = np.load("Outputs/reservoirWeight.npy")
-res = reservoir.Reservoir(size=600, spectralRadius =1.10, inputScaling=0.55, leakingRate=0.30, initialTransient=0, inputData=inputData, outputData=outputData, inputWeightRandom=inputWeightRandom, reservoirWeightRandom=reservoirWeightRandom)
+res = reservoir.Reservoir(size=600, spectralRadius =1.10, inputScaling=0.55, reservoirScaling=0.3, leakingRate=0.30, initialTransient=0, inputData=inputData, outputData=outputData, inputWeightRandom=inputWeightRandom, reservoirWeightRandom=reservoirWeightRandom)
 # res.inputWeightRandom = np.load("Outputs/inputWeight.npy")
 # res.reservoirWeightRandom = np.load("Outputs/reservoirWeight.npy")
 res.trainReservoir()

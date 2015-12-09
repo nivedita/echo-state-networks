@@ -4,7 +4,7 @@ import scipy.linalg as la
 import scipy.sparse.linalg as sla
 
 class Reservoir:
-    def __init__(self, size, spectralRadius, inputScaling, leakingRate, initialTransient, inputData, outputData, inputWeightRandom = None, reservoirWeightRandom = None):
+    def __init__(self, size, spectralRadius, inputScaling, reservoirScaling, leakingRate, initialTransient, inputData, outputData, inputWeightRandom = None, reservoirWeightRandom = None):
         """
 
         :param Nx: size of the reservoir
@@ -17,6 +17,7 @@ class Reservoir:
         self.Nx = size
         self.spectralRadius = spectralRadius
         self.inputScaling = inputScaling
+        self.reservoirScaling = reservoirScaling
         self.leakingRate = leakingRate
         self.initialTransient = initialTransient
         self.inputData = inputData
@@ -33,12 +34,10 @@ class Reservoir:
 
         if(inputWeightRandom == None):
             self.inputWeightRandom = np.random.rand(self.Nx, self.Nu)
-            #self.inputWeightRandom = np.random.normal(0.0, self.inputScaling * 2.0, (self.Nx, self.Nu))
         else:
             self.inputWeightRandom = inputWeightRandom
         if(reservoirWeightRandom == None):
             self.reservoirWeightRandom = np.random.rand(self.Nx, self.Nx)
-            #self.reservoirWeightRandom = np.random.normal(0.0, self.inputScaling * 2.0, (self.Nx, self.Nx))
         else:
             self.reservoirWeightRandom = reservoirWeightRandom
 
@@ -48,7 +47,7 @@ class Reservoir:
 
         #Internal states
         self.internalState = np.zeros((self.inputN-self.initialTransient, self.Nx))
-        self.latestInternalState = None
+        self.latestInternalState = np.zeros(self.Nx)
 
 
     def __generateInputWeight(self):
@@ -62,7 +61,8 @@ class Reservoir:
         #Choose a uniform distribution
         #TODO: Normalize ?
         self.reservoirWeight = self.reservoirWeightRandom
-        self.reservoirWeight = self.reservoirWeight - self.inputScaling
+
+        self.reservoirWeight = self.reservoirWeight - self.reservoirScaling
 
         #Make the reservoir weight matrix - a unit spectral radius
         rad = np.max(np.abs(la.eigvals(self.reservoirWeight)))
@@ -96,10 +96,8 @@ class Reservoir:
 
         testInputN, testInputD = testInputData.shape
         statesN, resD = self.internalState.shape
-        if(self.latestInternalState == None):
-            internalState = np.zeros(self.Nx)
-        else:
-            internalState = self.latestInternalState
+
+        internalState = self.latestInternalState
 
         testOutputData = np.zeros((testInputN, self.outputD))
 
@@ -113,6 +111,7 @@ class Reservoir:
             output = np.dot(self.outputWeight, internalState)
             testOutputData[t, :] = output
 
+        #This is to preserve the internal state between multiple predict calls
         self.latestInternalState = internalState
 
         return testOutputData

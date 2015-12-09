@@ -5,7 +5,7 @@
 # 2. Give the data to the reservoir
 # 3. Plot the performance (such as error rate/accuracy)
 
-from reservoir import DetermimisticReservoir as dr, DeterministicTuner as tuner, Reservoir as reservoir
+from reservoir import DetermimisticReservoir as dr, Tuner as tuner, Reservoir as reservoir, DeterministicTuner as dTuner
 from plotting import OutputPlot as outputPlot, ErrorPlot as errorPlot
 from performance import RootMeanSquareError as rmse
 import numpy as np
@@ -44,7 +44,7 @@ for i in range(len(topologyObjects)):
     inputWeight = 0.1
     leakingRateBound = (0.0,1.0)
     inputScalingBound = (0.0,1.0)
-    resTuner = tuner.DeterministicReservoirTuner(size=size,
+    resTuner = dTuner.DeterministicReservoirTuner(size=size,
                                                  initialTransient=initialTransient,
                                                  trainingInputData=inputTrainingData,
                                                  trainingOutputData=outputTrainingData,
@@ -95,13 +95,68 @@ for i in range(len(topologyObjects)):
     topologyError.append(errorFunction.compute(testActualOutputData.reshape((testActualOutputData.shape[0], 1)), testPredictedOutputData.reshape((testPredictedOutputData.shape[0],1))))
 
 
-#De-normalize
+#Tune the standard reservoir
+spectralRadiusBound = (0.0, 1.25)
+inputScalingBound = (0.0, 1.0)
+reservoirScalingBound = (0.0, 1.0)
+leakingRateBound = (0.0, 1.0)
+size = 100
+initialTransient = 5
+resTuner = tuner.ReservoirTuner(size = size,
+                                initialTransient=initialTransient,
+                                trainingInputData=inputTrainingData,
+                                trainingOutputData=outputTrainingData,
+                                validationInputData=inputTrainingData,
+                                validationOutputData=outputTrainingData,
+                                spectralRadiusBound=spectralRadiusBound,
+                                inputScalingBound=inputScalingBound,
+                                reservoirScalingBound=reservoirScalingBound,
+                                leakingRateBound=leakingRateBound)
+spectralRadiusOptimum, inputScalingOptimum, reservoirScalingOptimum, leakingRateOptimum, inputWeightOptimum, reservoirWeightOptimum = resTuner.getOptimalParameters()
+
+#Train the reservoir with the optimal parameters
+res = reservoir.Reservoir(size=size,
+                          spectralRadius=spectralRadiusOptimum,
+                          inputScaling=inputScalingOptimum,
+                          reservoirScaling=reservoirScalingOptimum,
+                          leakingRate=leakingRateOptimum,
+                          initialTransient=initialTransient,
+                          inputData=inputTrainingData,
+                          outputData=outputTrainingData,
+                          inputWeightRandom=inputWeightOptimum,
+                          reservoirWeightRandom=reservoirWeightOptimum)
+res.trainReservoir()
+
+#Warm up for the trained data
+predictedTrainingOutputData = res.predict(inputTrainingData)
+
+
+#Predict for future
+lastAvailablePoint = predictedTrainingOutputData[nTraining-1,0]
+testingPredictedOutputData = []
+for i in range(nTesting):
+    #Compose the query
+    query = [1.0]
+    query.append(lastAvailablePoint)
+
+    #Predict the next point
+    nextPoint = res.predict(np.array(query).reshape(1,2))[0,0]
+    testingPredictedOutputData.append(nextPoint)
+
+    lastAvailablePoint = nextPoint
+
+testingPredictedOutputData = np.array(testingPredictedOutputData).reshape(nTesting, 1)
+
+#Predict
+testPredictedOutputDataStandard = minMax.inverse_transform(testingPredictedOutputData)
+standardError = errorFunction.compute(testActualOutputData.reshape((testActualOutputData.shape[0],1)), testPredictedOutputDataStandard.reshape((testPredictedOutputDataStandard.shape[0],1)))
 testActualOutputData = minMax.inverse_transform(testActualOutputData[:nTesting, 0])
 
 #Plotting of the prediction output and error
-outplot = outputPlot.OutputPlot("Outputs/Prediction.html", "Darwin Sea Level Pressure Prediction", "Deterministic echo state networks", "Time", "Sea Level Pressure")
+outplot = outputPlot.OutputPlot("Outputs/Prediction.html", "Darwin Sea Level Pressure Prediction", "Comparison of standard vs deterministic", "Time", "Sea Level Pressure")
 outplot.setXSeries(np.arange(1, nTesting + 1))
 outplot.setYSeries('Actual Output', testActualOutputData)
+outplot.setYSeries('Predicted Output_standard_ESN', testPredictedOutputDataStandard)
 for i in range(len(topologyObjects)):
     seriesName = 'Predicted Output_'+ topologyNames[i]
     seriesData = topologyTestOutput[i]
@@ -110,7 +165,8 @@ outplot.createOutput()
 
 #Plotting of regression error
 topologyNames.append('Standard')
-errPlot = errorPlot.ErrorPlot("Outputs/RegressionError.html", "Deterministic echo state networks", "with different topologies", "Topology", "Total Error")
+topologyError.append(standardError)
+errPlot = errorPlot.ErrorPlot("Outputs/RegressionError.html", "Comparison of standard vs deterministic", "with different parameters", "ESN Configuration", "Total Error")
 errPlot.setXAxis(np.array(topologyNames))
 errPlot.setYAxis('RMSE', np.array(topologyError))
 errPlot.createOutput()

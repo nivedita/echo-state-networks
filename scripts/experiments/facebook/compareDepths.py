@@ -59,6 +59,7 @@ for depth in depthList:
     #Tune the reservoir
     spectralRadiusBound = (0.0, 1.0)
     inputScalingBound = (0.0, 1.0)
+    reservoirScalingBound = (0.0, 1.0)
     leakingRateBound = (0.0, 1.0)
     size = 300
     initialTransient = 50
@@ -70,13 +71,15 @@ for depth in depthList:
                                     validationOutputData=validationOutputData,
                                     spectralRadiusBound=spectralRadiusBound,
                                     inputScalingBound=inputScalingBound,
+                                    reservoirScalingBound=reservoirScalingBound,
                                     leakingRateBound=leakingRateBound)
-    spectralRadiusOptimum, inputScalingOptimum, leakingRateOptimum, inputWeightOptimum, reservoirWeightOptimum = resTuner.getOptimalParameters()
+    spectralRadiusOptimum, inputScalingOptimum, reservoirScalingOptimum, leakingRateOptimum, inputWeightOptimum, reservoirWeightOptimum = resTuner.getOptimalParameters()
 
     #Train the reservoir with the optimal parameters
     res = reservoir.Reservoir(size=size,
                               spectralRadius=spectralRadiusOptimum,
                               inputScaling=inputScalingOptimum,
+                              reservoirScaling=reservoirScalingOptimum,
                               leakingRate=leakingRateOptimum,
                               initialTransient=initialTransient,
                               inputData=trainingInputData,

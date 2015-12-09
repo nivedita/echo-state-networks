@@ -4,7 +4,7 @@
 # 2. Give the data to the reservoir
 # 3. Plot the performance (such as error rate/accuracy)
 
-from reservoir import Reservoir as reservoir, Tuner as tuner
+from reservoir import Reservoir as reservoir, Tuner as tuner, DetermimisticReservoir as dr, DeterministicTuner as dTuner
 from plotting import OutputTimeSeries as outTimePlot
 from datetime import date, timedelta, datetime
 import numpy as np
@@ -44,47 +44,40 @@ processedData = np.hstack((np.ones((processedData.shape[0], 1)),processedData))
 trainingInputData = processedData[:,:1+depth]
 trainingOutputData = processedData[:,1+depth:]
 
-
-#Validation data
-validationInputData = trainingInputData
-validationOutputData = trainingOutputData
-
-
-#Tune the reservoir
-spectralRadiusBound = (0.0, 1.0)
-inputScalingBound = (0.0, 1.0)
-reservoirScalingBound = (0.0, 1.0)
-leakingRateBound = (0.0, 1.0)
-size = 300
+#Tune the parameters
+size=100
+inputWeight = 0.1
+leakingRateBound = (0.0,1.0)
+inputScalingBound = (0.0,1.0)
 initialTransient = 50
-resTuner = tuner.ReservoirTuner(size=size,
-                                  initialTransient=initialTransient,
-                                  trainingInputData=trainingInputData,
-                                  trainingOutputData=trainingOutputData,
-                                  validationInputData=validationInputData,
-                                  validationOutputData=validationOutputData,
-                                  spectralRadiusBound=spectralRadiusBound,
-                                  inputScalingBound=inputScalingBound,
-                                  reservoirScalingBound=reservoirScalingBound,
-                                  leakingRateBound=leakingRateBound)
-spectralRadiusOptimum, inputScalingOptimum, reservoirScalingOptimum, leakingRateOptimum, inputWeightOptimum, reservoirWeightOptimum = resTuner.getOptimalParameters()
+resTuner = dTuner.DeterministicReservoirTuner(size=size,
+                                            initialTransient=initialTransient,
+                                            trainingInputData=trainingInputData,
+                                            trainingOutputData=trainingOutputData,
+                                            validationInputData=trainingInputData,
+                                            validationOutputData=trainingOutputData,
+                                            inputWeight_v=inputWeight,
+                                            reservoirTopology=dr.ReservoirTopologyDLRB(0.7, 0.3),
+                                            inputScalingBound=inputScalingBound,
+                                            leakingRateBound=leakingRateBound)
 
-#Train the reservoir with the optimal parameters
-res = reservoir.Reservoir(size=size,
-                         spectralRadius=spectralRadiusOptimum,
-                         inputScaling=inputScalingOptimum,
-                         reservoirScaling=reservoirScalingOptimum,
-                         leakingRate=leakingRateOptimum,
-                         initialTransient=initialTransient,
-                         inputData=trainingInputData,
-                         outputData=trainingOutputData,
-                         inputWeightRandom=inputWeightOptimum,
-                         reservoirWeightRandom=reservoirWeightOptimum)
+inputScalingOptimum, leakingRateOptimum = resTuner.getOptimalParameters()
 
+
+#Train the reservoir
+res = dr.DeterministicReservoir(size=size,
+                                inputWeight_v=inputWeight,
+                                inputWeightScaling=inputScalingOptimum,
+                                inputData=trainingInputData,
+                                outputData=trainingOutputData,
+                                leakingRate=leakingRateOptimum,
+                                initialTransient=initialTransient,
+                                reservoirTopology=dr.ReservoirTopologyDLRB(0.7, 0.3))
 res.trainReservoir()
 
-# To predict the test data, predict training and valiadation data as a warm up
-trainingPredictedOutputData = res.predict(trainingInputData)
+
+# To predict the test data, predict training and validation data as a warm up
+#trainingPredictedOutputData = res.predict(trainingInputData)
 
 
 #Now, start predicting the future

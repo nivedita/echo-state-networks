@@ -58,6 +58,7 @@ testingOutputData = processedData[cutOffIndexTesting:,1+depth:1+depth+horizon]
 #Tune the reservoir
 spectralRadiusBound = (0.0, 1.9)
 inputScalingBound = (0.0, 1.0)
+reservoirScalingBound = (0.0, 1.0)
 leakingRateBound = (0.0, 1.0)
 size = 200
 initialTransient = 50
@@ -70,12 +71,13 @@ resTuner = tuner.ReservoirTuner(size=size,
                                  spectralRadiusBound=spectralRadiusBound,
                                  inputScalingBound=inputScalingBound,
                                  leakingRateBound=leakingRateBound)
-spectralRadiusOptimum, inputScalingOptimum, leakingRateOptimum, inputWeightOptimum, reservoirWeightOptimum = resTuner.getOptimalParameters()
+spectralRadiusOptimum, inputScalingOptimum, reservoirScalingOptimum, leakingRateOptimum, inputWeightOptimum, reservoirWeightOptimum = resTuner.getOptimalParameters()
 
 #Train the reservoir with the optimal parameters
 res = reservoir.Reservoir(size=size,
                         spectralRadius=spectralRadiusOptimum,
                         inputScaling=inputScalingOptimum,
+                        reservoirScaling=reservoirScalingOptimum,
                         leakingRate=leakingRateOptimum,
                         initialTransient=initialTransient,
                         inputData=trainingInputData,

@@ -50,6 +50,7 @@ validationOutputData = trainingOutputData
 #Tune the reservoir
 spectralRadiusBound = (0.0, 1.0)
 inputScalingBound = (0.0, 1.0)
+reservoirScalingBound = (0.0, 1.0)
 leakingRateBound = (0.0, 1.0)
 size = 300
 initialTransient = 50
@@ -61,8 +62,9 @@ resTuner = tuner.ReservoirTuner(size=size,
                                 validationOutputData=validationOutputData,
                                 spectralRadiusBound=spectralRadiusBound,
                                 inputScalingBound=inputScalingBound,
+                                reservoirScalingBound=reservoirScalingBound,
                                 leakingRateBound=leakingRateBound)
-spectralRadiusOptimum, inputScalingOptimum, leakingRateOptimum, inputWeightOptimum, reservoirWeightOptimum = resTuner.getOptimalParameters()
+spectralRadiusOptimum, inputScalingOptimum, reservoirScalingOptimum, leakingRateOptimum, inputWeightOptimum, reservoirWeightOptimum = resTuner.getOptimalParameters()
 
 #Just vary the horizons between 10 and 100 in steps of 10
 horizonList = range(10,maxHorizon+10,10)
@@ -75,6 +77,7 @@ for horizon in horizonList:
     res = reservoir.Reservoir(size=size,
                               spectralRadius=spectralRadiusOptimum,
                               inputScaling=inputScalingOptimum,
+                              reservoirScaling=reservoirScalingOptimum,
                               leakingRate=leakingRateOptimum,
                               initialTransient=initialTransient,
                               inputData=trainingInputData,
