@@ -13,20 +13,20 @@ from timeseries import TimeSeries as ts
 from sklearn import preprocessing as pp
 
 # Depth and Horizon
-depth = 1
+depth = 100
 horizon = 90
 valueIndex = 3
 
 # Read data from the file
 rawData = np.loadtxt("facebookPostsCount_bmw_raw.txt", delimiter=',')
 
-# Read until the horizon
-actualData = rawData[rawData.shape[0]-horizon:, valueIndex]
-rawData = rawData[:rawData.shape[0]-horizon, :]
-
 # Normalize the raw data
 minMax = pp.MinMaxScaler((0,1))
 rawData[:, valueIndex] = minMax.fit_transform(rawData[:, valueIndex])
+
+# Read until the horizon
+actualData = rawData[rawData.shape[0]-horizon:, valueIndex]
+rawData = rawData[:rawData.shape[0]-horizon, :]
 
 # Available data - to store known and unknown
 availableData = np.zeros((rawData.shape[0]+horizon,4))
@@ -45,6 +45,9 @@ trainingInputData = processedData[:,:1+depth]
 trainingOutputData = processedData[:,1+depth:]
 
 
+print(trainingInputData)
+print(trainingOutputData)
+
 #Validation data
 validationInputData = trainingInputData
 validationOutputData = trainingOutputData
@@ -55,7 +58,7 @@ spectralRadiusBound = (0.0, 1.0)
 inputScalingBound = (0.0, 1.0)
 reservoirScalingBound = (0.0, 1.0)
 leakingRateBound = (0.0, 1.0)
-size = 2000
+size = 500
 initialTransient = 50
 resTuner = tuner.ReservoirTuner(size=size,
                                   initialTransient=initialTransient,
@@ -119,6 +122,7 @@ for i in range(horizon):
     lastDayIndex = nextDayIndex
 
 predicted = minMax.inverse_transform(np.array(predictedOutput))
+actualData = minMax.inverse_transform(actualData)
 
 # Plotting of the actual and prediction output
 outputFolderName = "Outputs/Outputs" + str(datetime.now()) + "_depth_" + str(depth) + "_horizon_" + str(horizon)

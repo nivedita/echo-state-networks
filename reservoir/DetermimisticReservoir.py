@@ -83,7 +83,6 @@ class DeterministicReservoir:
         self.latestInternalState = None
 
     def __generateInputWeight(self):
-        #TODO: How to generate the weights for this mimimum complexity ESN
         for i in range(self.Nu):
             for d in range(self.Nx):
                 if 0 <= int(self.pi[d]) <= 4:

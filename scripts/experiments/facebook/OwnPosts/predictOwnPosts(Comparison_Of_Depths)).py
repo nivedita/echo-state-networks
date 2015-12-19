@@ -20,16 +20,17 @@ valueIndex = 3
 # Read data from the file
 rawData = np.loadtxt("facebookPostsCount_bmw_raw.txt", delimiter=',')
 
-# Read until the horizon
-actualData = rawData[rawData.shape[0]-horizon:, valueIndex]
-rawData = rawData[:rawData.shape[0]-horizon, :]
-
 # Normalize the raw data
 minMax = pp.MinMaxScaler((0,1))
 rawData[:, valueIndex] = minMax.fit_transform(rawData[:, valueIndex])
 
+# Read until the horizon
+actualData = rawData[rawData.shape[0]-horizon:, valueIndex]
+rawData = rawData[:rawData.shape[0]-horizon, :]
+
+
 #Just vary the depths between 100 and 400 in steps of 50
-depthList = range(300,410,10)
+depthList = range(100,450,50)
 predictedDict = {} #Dict of predicted arrays. Depth being the key
 regressionError = []#List of regression errors
 xAxisError = []
