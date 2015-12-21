@@ -39,5 +39,6 @@ class TimeSeriesProcessor:
 
 if __name__ == "__main__":
     rawData = np.loadtxt("testData.txt", delimiter=',')
-    tsp = TimeSeriesProcessor(rawData, 3, 4, 4)
+    tsp = TimeSeriesProcessor(rawData[:,4], 3, 1)
     processedData = tsp.getProcessedData()
+    print(processedData)

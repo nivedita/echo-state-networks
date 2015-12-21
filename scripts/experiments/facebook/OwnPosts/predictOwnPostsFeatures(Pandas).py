@@ -31,10 +31,17 @@ series = pd.Series(data=trainingData.flatten(),index=trainingIndex)
 #                        pd.Timedelta(weeks=-1), pd.Timedelta(weeks=-2), pd.Timedelta(weeks=-3), pd.Timedelta(weeks=-4)]
 
 featureIntervalList = []
-depth = 7
-for i in range(depth, 0, -1):
-    interval = pd.Timedelta(days=-(i))
+
+weeklyDepth = range(10,1,-1)
+for i in weeklyDepth:
+    interval = pd.Timedelta(weeks=(-i))
     featureIntervalList.append(interval)
+
+# dailyDepth = 30
+# for i in range(dailyDepth, 0, -1):
+#     interval = pd.Timedelta(days=-(i))
+#     featureIntervalList.append(interval)
+
 
 targetIntervalList = [pd.Timedelta(days=0)]
 
@@ -53,7 +60,7 @@ spectralRadiusBound = (0.0, 1.0)
 inputScalingBound = (0.0, 1.0)
 reservoirScalingBound = (0.0, 1.0)
 leakingRateBound = (0.0, 1.0)
-size = 500
+size = 1000
 initialTransient = 50
 resTuner = tuner.ReservoirTuner(size=size,
                                 initialTransient=initialTransient,
@@ -115,12 +122,13 @@ actualData = minMax.inverse_transform(testingData.reshape((testingData.shape[0],
 predicted = minMax.inverse_transform(np.array(predicted))
 
 # Plotting of the actual and prediction output
-outputFolderName = "Outputs/Outputs-Pandas" + str(datetime.now()) + "_horizon_" + str(horizon)
+outputFolderName = "Outputs/Outputs-Pandas_weekly" + str(datetime.now()) + "_horizon_" + str(horizon)
 os.mkdir(outputFolderName)
 outplot = outTimePlot.OutputTimeSeriesPlot(outputFolderName + "/Prediction.html", "Facebook Own posts-BMW", "", "Number of posts")
 outplot.setSeries('Actual Output', np.array(xAxis), actualData)
 outplot.setSeries('Predicted Output', np.array(xAxis), predicted)
 outplot.createOutput()
+
 
 
 

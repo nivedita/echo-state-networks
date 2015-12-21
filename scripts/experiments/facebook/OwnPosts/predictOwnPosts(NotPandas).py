@@ -13,8 +13,8 @@ from timeseries import TimeSeries as ts
 from sklearn import preprocessing as pp
 
 # Depth and Horizon
-depth = 100
-horizon = 90
+depth = 5
+horizon = 2008
 valueIndex = 3
 
 # Read data from the file
@@ -43,10 +43,6 @@ processedData = np.hstack((np.ones((processedData.shape[0], 1)),processedData))
 #Training data
 trainingInputData = processedData[:,:1+depth]
 trainingOutputData = processedData[:,1+depth:]
-
-
-print(trainingInputData)
-print(trainingOutputData)
 
 #Validation data
 validationInputData = trainingInputData
@@ -85,6 +81,7 @@ res = reservoir.Reservoir(size=size,
                          reservoirWeightRandom=reservoirWeightOptimum)
 
 res.trainReservoir()
+
 
 # To predict the test data, predict training and valiadation data as a warm up
 trainingPredictedOutputData = res.predict(trainingInputData)

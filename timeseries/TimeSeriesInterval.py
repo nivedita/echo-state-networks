@@ -27,6 +27,7 @@ class TimeSeriesIntervalProcessor:
                     feature.append(valueAtInterval)
                 else:
                     missingFeature = True
+                    break
 
 
             #Target vector
@@ -37,6 +38,7 @@ class TimeSeriesIntervalProcessor:
                     target.append(valueAtInterval)
                 else:
                     missingTarget = False
+                    break
 
 
             if(not missingFeature and not missingTarget):
@@ -58,7 +60,8 @@ class TimeSeriesIntervalProcessor:
 if __name__ == "__main__":
     df = pd.read_csv('testSeriesData.csv', index_col=0, parse_dates=True)
     series = pd.Series(data=df.as_matrix().flatten(),index=df.index)
-    featureIntervalList = [pd.Timedelta(days=-1), pd.Timedelta(days=-2), pd.Timedelta(days=-3), pd.Timedelta(days=-4), pd.Timedelta(days=-5), pd.Timedelta(weeks=-1)]
+    featureIntervalList = [pd.Timedelta(days=-3), pd.Timedelta(days=-2), pd.Timedelta(days=-1)]
     targetIntervalList = [pd.Timedelta(days=0)]
     tsp = TimeSeriesIntervalProcessor(series, featureIntervalList, targetIntervalList)
     featureVectors, targetVectors = tsp.getProcessedData()
+    print(featureVectors,targetVectors)
