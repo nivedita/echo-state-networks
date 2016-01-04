@@ -5,7 +5,7 @@
 # 2. Give the data to the reservoir
 # 3. Plot the performance (such as error rate/accuracy)
 
-from reservoir import DetermimisticReservoir as dr, DeterministicTuner as tuner, Reservoir as reservoir
+from reservoir import DetermimisticReservoir as dr, DeterministicTuner as tuner, EchoStateNetwork as reservoir
 from plotting import OutputPlot as outputPlot, ErrorPlot as errorPlot
 from performance import RootMeanSquareError as rmse
 import numpy as np

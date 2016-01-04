@@ -4,7 +4,7 @@
 # 2. Give the data to the reservoir
 # 3. Plot the performance (such as error rate/accuracy)
 
-from reservoir import Reservoir as reservoir
+from reservoir import EchoStateNetwork as reservoir
 from plotting import OutputPlot as outputPlot, ErrorPlot as errorPlot, OutputTimeSeries as outTimePlot
 from performance import RootMeanSquareError as rmse
 from datetime import datetime

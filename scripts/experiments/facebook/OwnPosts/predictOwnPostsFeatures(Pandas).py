@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 from timeseries import TimeSeriesInterval as tsi
 from sklearn import preprocessing as pp
-from reservoir import Reservoir as reservoir, Tuner as tuner
+from reservoir import EchoStateNetwork as reservoir, Tuner as tuner
 from datetime import datetime
 from plotting import OutputTimeSeries as outTimePlot
 import os

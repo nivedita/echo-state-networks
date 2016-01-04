@@ -4,7 +4,7 @@
 # 2. Give the data to the reservoir
 # 3. Plot the performance (such as error rate/accuracy)
 
-from reservoir import Reservoir as reservoir, Tuner as tuner
+from reservoir import EchoStateNetwork as reservoir, Tuner as tuner
 from plotting import OutputTimeSeries as outTimePlot
 from datetime import datetime
 import numpy as np

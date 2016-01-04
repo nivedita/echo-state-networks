@@ -1,10 +1,12 @@
 from scipy import optimize
-from reservoir import Reservoir
+from reservoir import EchoStateNetwork
 from performance import RootMeanSquareError as rmse
 import numpy as np
 
-class ReservoirTuner:
-    def __init__(self, size, initialTransient, trainingInputData, trainingOutputData, validationInputData, validationOutputData, spectralRadiusBound, inputScalingBound, reservoirScalingBound, leakingRateBound):
+class ESNTuner:
+    def __init__(self, size, initialTransient, trainingInputData, trainingOutputData, validationInputData, validationOutputData,
+                 spectralRadiusBound, inputScalingBound, reservoirScalingBound, leakingRateBound,
+                 reservoirTopology, inputConnectivity=0.6):
         self.size = size
         self.initialTransient = initialTransient
         self.trainingInputData = trainingInputData
@@ -15,14 +17,19 @@ class ReservoirTuner:
         self.inputScalingBound = inputScalingBound
         self.reservoirScalingBound = reservoirScalingBound
         self.leakingRateBound = leakingRateBound
+        self.reservoirTopology = reservoirTopology
+        self.inputConnectivity = inputConnectivity
 
-         #Generate the random input and reservoir matrices
-        self.inputN, self.inputD = self.trainingInputData.shape
-        self.inputWeightRandom = np.random.rand(self.size, self.inputD)
-        self.reservoirWeightRandom = np.random.rand(self.size, self.size)
+        #Create a echo state network
+        esn = EchoStateNetwork.EchoStateNetwork(size=self.size,
+                                                inputData=self.trainingInputData,
+                                                outputData=self.trainingOutputData,
+                                                reservoirTopology=self.reservoirTopology,
+                                                inputConnectivity=self.inputConnectivity)
+        self.inputWeightConn = esn.inputWeightRandom, esn.randomInputIndices
+        self.reservoirWeightConn = esn.reservoirWeightRandom, esn.randomReservoirIndices
 
-
-    def __reservoirTrain__(self, x):
+    def __ESNTrain__(self, x):
 
         #Extract the parameters
         spectralRadius = x[0]
@@ -31,22 +38,24 @@ class ReservoirTuner:
         leakingRate = x[3]
 
         #Create the reservoir
-        res = Reservoir.Reservoir(size=self.size,
-                                  spectralRadius=spectralRadius,
-                                  inputScaling=inputScaling,
-                                  reservoirScaling=reservoirScaling,
-                                  leakingRate=leakingRate,
-                                  initialTransient=self.initialTransient,
-                                  inputData=self.trainingInputData,
-                                  outputData=self.trainingOutputData,
-                                  inputWeightRandom=self.inputWeightRandom,
-                                  reservoirWeightRandom=self.reservoirWeightRandom)
+        esn = EchoStateNetwork.EchoStateNetwork(size=self.size,
+                                                inputData=self.trainingInputData,
+                                                outputData=self.trainingOutputData,
+                                                reservoirTopology=self.reservoirTopology,
+                                                spectralRadius=spectralRadius,
+                                                inputScaling=inputScaling,
+                                                reservoirScaling=reservoirScaling,
+                                                leakingRate=leakingRate,
+                                                initialTransient=self.initialTransient,
+                                                inputWeightConn=self.inputWeightConn,
+                                                reservoirWeightConn=self.reservoirWeightConn
+                                                )
 
         #Train the reservoir
-        res.trainReservoir()
+        esn.trainReservoir()
 
         #Predict for the validation data
-        predictedOutputData = res.predict(self.validationInputData)
+        predictedOutputData = esn.predict(self.validationInputData)
 
         #Calcuate the regression error
         errorFunction = rmse.RootMeanSquareError()
@@ -57,8 +66,8 @@ class ReservoirTuner:
 
     def __tune__(self):
         bounds = [self.spectralRadiusBound, self.inputScalingBound, self.reservoirScalingBound, self.leakingRateBound]
-        result = optimize.differential_evolution(self.__reservoirTrain__,bounds=bounds)
-        return result.x[0], result.x[1], result.x[2], result.x[3], self.inputWeightRandom, self.reservoirWeightRandom
+        result = optimize.differential_evolution(self.__ESNTrain__,bounds=bounds)
+        return result.x[0], result.x[1], result.x[2], result.x[3], self.inputWeightConn, self.reservoirWeightConn
 
     def getOptimalParameters(self):
         return self.__tune__()

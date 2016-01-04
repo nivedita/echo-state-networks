@@ -5,7 +5,7 @@
 # 2. Give the data to the reservoir
 # 3. Plot the performance (such as error rate/accuracy)
 
-from reservoir import Reservoir as reservoir, Tuner as tuner
+from reservoir import EchoStateNetwork as esn, Tuner as tuner, ReservoirTopology as topology
 from plotting import OutputPlot as outputPlot, ErrorPlot as errorPlot
 from performance import RootMeanSquareError as rmse
 import numpy as np
@@ -37,30 +37,38 @@ reservoirScalingBound = (0.0, 1.0)
 leakingRateBound = (0.0, 1.0)
 size = 100
 initialTransient = 5
-resTuner = tuner.ReservoirTuner(size = size,
-                                initialTransient=initialTransient,
-                                trainingInputData=trainingInputData,
-                                trainingOutputData=trainingOutputData,
-                                validationInputData=trainingInputData,
-                                validationOutputData=trainingOutputData,
-                                spectralRadiusBound=spectralRadiusBound,
-                                inputScalingBound=inputScalingBound,
-                                reservoirScalingBound=reservoirScalingBound,
-                                leakingRateBound=leakingRateBound)
-spectralRadiusOptimum, inputScalingOptimum, reservoirScalingOptimum, leakingRateOptimum, inputWeightOptimum, reservoirWeightOptimum = resTuner.getOptimalParameters()
+inputConnectivity = 0.7
+reservoirTopology = topology.RandomTopology(size=size, connectivity=0.3)
+esnTuner = tuner.ESNTuner(size=size,
+                     initialTransient=initialTransient,
+                     trainingInputData=trainingInputData,
+                     trainingOutputData=trainingOutputData,
+                     validationInputData=trainingInputData,
+                     validationOutputData=trainingOutputData,
+                     spectralRadiusBound=spectralRadiusBound,
+                     inputScalingBound=inputScalingBound,
+                     reservoirScalingBound=reservoirScalingBound,
+                     leakingRateBound=leakingRateBound,
+                     reservoirTopology=reservoirTopology,
+                     inputConnectivity=inputConnectivity)
+spectralRadiusOptimum, inputScalingOptimum, reservoirScalingOptimum, leakingRateOptimum, inputWeightConn, reservoirWeightConn = esnTuner.getOptimalParameters()
 
-res = reservoir.Reservoir(size=size,
-                          spectralRadius=spectralRadiusOptimum,
-                          inputScaling=inputScalingOptimum,
-                          reservoirScaling=reservoirScalingOptimum,
-                          leakingRate=leakingRateOptimum,
-                          initialTransient=initialTransient,
-                          inputData=trainingInputData,
-                          outputData=trainingOutputData)
-res.trainReservoir()
+network = esn.EchoStateNetwork(size=size,
+                               inputData=trainingInputData,
+                               outputData=trainingOutputData,
+                               reservoirTopology=reservoirTopology,
+                               spectralRadius=spectralRadiusOptimum,
+                               inputScaling=inputScalingOptimum,
+                               reservoirScaling=reservoirScalingOptimum,
+                               leakingRate=leakingRateOptimum,
+                               initialTransient=initialTransient,
+                               inputConnectivity=inputConnectivity,
+                               inputWeightConn=inputWeightConn,
+                               reservoirWeightConn=reservoirWeightConn)
+network.trainReservoir()
 
 #Warm up for the trained data
-predictedTrainingOutputData = res.predict(trainingInputData)
+predictedTrainingOutputData = network.predict(trainingInputData)
 
 
 #Predict for future
@@ -72,7 +80,7 @@ for i in range(nTesting):
     query.append(lastAvailablePoint)
 
     #Predict the next point
-    nextPoint = res.predict(np.array(query).reshape(1,2))[0,0]
+    nextPoint = network.predict(np.array(query).reshape(1,2))[0,0]
     testingPredictedOutputData.append(nextPoint)
 
     lastAvailablePoint = nextPoint

@@ -1,5 +1,5 @@
 from scipy import optimize
-from reservoir import Reservoir, DetermimisticReservoir as dr
+from reservoir import EchoStateNetwork, DetermimisticReservoir as dr
 from performance import RootMeanSquareError as rmse
 
 class DeterministicReservoirTuner:
