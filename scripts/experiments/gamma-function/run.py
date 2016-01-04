@@ -5,7 +5,7 @@
 # 3. Plot the performance (such as error rate/accuracy)
 from theano.tensor.tests.test_elemwise import test_IsInf_IsNan
 
-from reservoir import Reservoir as reservoir
+from reservoir import EchoStateNetwork as reservoir
 from plotting import OutputPlot as outputPlot, ErrorPlot as errorPlot
 from performance import RootMeanSquareError as rmse
 from datetime import datetime
