@@ -55,7 +55,7 @@ class EchoStateNetwork:
         self.internalState = np.zeros((self.inputN-self.initialTransient, self.Nx))
         self.latestInternalState = np.zeros(self.Nx)
 
-    def __gererateInputConnectivityMatrix(self):
+    def __generateInputConnectivityMatrix(self):
         #Initialize the matrix to zeros
         connectivity = np.zeros((self.Nx, self.Nu))
 
@@ -75,7 +75,7 @@ class EchoStateNetwork:
         #ie. the values are chosen from [-inputScaling, +inputScaling]
         #TODO: Normalize ?
         self.inputWeightRandom = np.random.rand(self.Nx, self.Nu)
-        self.inputConnMatrix, self.randomInputIndices = self.__gererateInputConnectivityMatrix()
+        self.inputConnMatrix, self.randomInputIndices = self.__generateInputConnectivityMatrix()
         self.inputWeightRandom = self.inputWeightRandom * self.inputConnMatrix
         self.inputWeight = self.inputWeightRandom
 
