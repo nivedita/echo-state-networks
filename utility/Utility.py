@@ -140,10 +140,16 @@ class SeriesUtility:
         os.mkdir(folderName)
         outplot = plotting.OutputTimeSeriesPlot(folderName + "/" + fileName, title, "", subTitle)
 
-        for series in seriesList:
-            for index,value in series.iteritems():
+        for i in range(len(seriesList)):
+            series = seriesList[i]
+            xAxis = []
+            for index, value in series.iteritems():
+                year = index.strftime("%Y")
+                month = index.strftime("%m")
+                day = index.strftime("%d")
+                hour = index.strftime("%H")
+                nextDayStr = "Date.UTC(" + str(year)+","+ str(int(month)-1) + "," + str(day) + ","+ str(hour)+")"
+                xAxis.append(nextDayStr)
 
-
-        outplot.setSeries('Actual Output', np.array(xAxis), actualData)
-        outplot.setSeries('Predicted Output', np.array(xAxis), predicted)
+            outplot.setSeries(seriesNameList[i], np.array(xAxis), series.values)
         outplot.createOutput()

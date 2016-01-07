@@ -1,4 +1,5 @@
 from utility import Utility
+from datetime import datetime
 
 
 datasetFileName = "facebookPosts_timestamp_bmw_time.csv"
@@ -36,3 +37,5 @@ actualSeries = util.descaleSeries(testingSeries)
 predictedSeries = util.descaleSeries(predictedSeries)
 
 # Step 8 - Plot the results
+util.plotSeries("Outputs/Outputs-Pandas_weekly_daily" + str(datetime.now()) + "_horizon_" + str(horizon),
+                [actualSeries, predictedSeries], ["Actual Output", "Predicted Output"], "Facebook Own posts-BMW", "Number of posts")
