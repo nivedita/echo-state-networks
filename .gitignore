@@ -68,3 +68,9 @@ target/
 *.DS_Store
 
 *.pyc
+
+*.name
+
+*.iml
+
+*.xml

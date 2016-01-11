@@ -203,7 +203,7 @@ class ESNTunerWithConnectivity:
         gc.collect()
 
         #Return the error
-
+        print("\nOptimizing connectivity..")
         print("Regression error"+str(regressionError)+"\n")
         return regressionError
 
@@ -242,7 +242,7 @@ class ESNTunerWithConnectivity:
         gc.collect()
 
         #Return the error
-
+        print("\nOptimizing esn parameters..")
         print("Regression error"+str(regressionError)+"\n")
         return regressionError
 

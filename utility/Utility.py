@@ -5,13 +5,13 @@ from reservoir import EchoStateNetwork as esn, ReservoirTopology as topology
 from sklearn import preprocessing as pp
 import os
 from plotting import OutputTimeSeries as plotting
+from reservoir import Tuner as tuner
 
 class SeriesUtility:
     def __init__(self):
         self.esn = None
         self.scalingFunction = None
 
-    'Convert csv files to pandas time series'
     def convertDatasetsToSeries(self, fileName):
         # Read the data
         df = pd.read_csv(fileName, index_col=0, parse_dates=True, names=['value'])
@@ -21,10 +21,17 @@ class SeriesUtility:
         series = pd.Series(data=data, index=df.index)
         return series
 
-    'Unify multiple series such that the start and end are synced'
-    #def unifyMultipleSeries(self, seriesList):
+    def intersect(self, seriesList):
+        index = seriesList[0].index
 
-    'Aggregate multiple series into one based on the aggregation rules like sum, mean etc'
+        for i in range(1,len(seriesList)):
+            index = seriesList[i].index.intersection(index)
+
+        intersection = []
+        for series in seriesList:
+            intersection.append(pd.Series(data=series[index], index=index))
+        return intersection
+
     #def aggregateSeries(self, seriesList, aggregationRule):
 
     #def plotSeriesPrediction(self, seriesActual, seriesPredicted):
@@ -35,11 +42,18 @@ class SeriesUtility:
         else:
             return sum(x)
 
+    def _exists(self, x):
+        if len(x) == 0:
+            return 0
+        else:
+            return 1
+
     def resampleSeries(self, series, samplingRule):
-        return series.resample(rule=samplingRule, how=self._sum)
+        return series.resample(rule=samplingRule, how=self._exists)
 
     def scaleSeries(self, series):
         self.scalingFunction = pp.MinMaxScaler((0,1))
+        #self.scalingFunction = pp.StandardScaler()
         data = series.values
         data = self.scalingFunction.fit_transform(data)
         scaledSeries = pd.Series(data=data,index=series.index)
@@ -104,6 +118,48 @@ class SeriesUtility:
         # Store it and it will be used in the predictFuture method
         self.esn = network
 
+    def trainESNWithFullTuning(self, size, featureVectors, targetVectors, initialTransient):
+
+        inputConnectivityBound = (0.1, 1.0)
+        reservoirConnectivityBound = (0.1, 1.0)
+        inputScalingBound = (0.0, 1.0)
+        reservoirScalingBound = (0.0, 1.0)
+        spectralRadiusBound = (0.0, 1.0)
+        leakingRateBound = (0.0, 1.0)
+
+        esnTuner = tuner.ESNTunerWithConnectivity(size=size,
+                                                  initialTransient=initialTransient,
+                                                  trainingInputData=featureVectors,
+                                                  trainingOutputData=targetVectors,
+                                                  validationInputData=featureVectors,
+                                                  validationOutputData=targetVectors,
+                                                  spectralRadiusBound=spectralRadiusBound,
+                                                  inputScalingBound=inputScalingBound,
+                                                  reservoirScalingBound=reservoirScalingBound,
+                                                  leakingRateBound=leakingRateBound,
+                                                  inputConnectivityBound=inputConnectivityBound,
+                                                  reservoirConnectivityBound=reservoirConnectivityBound)
+        spectralRadiusOptimum, inputScalingOptimum, reservoirScalingOptimum, leakingRateOptimum, inputWeightConn, reservoirWeightConn = esnTuner.getOptimalParameters()
+
+        network = esn.EchoStateNetwork(size=size,
+                                       inputData=featureVectors,
+                                       outputData=targetVectors,
+                                       reservoirTopology=topology.RandomTopology(size=size, connectivity=0.3),
+                                       spectralRadius=spectralRadiusOptimum,
+                                       inputScaling=inputScalingOptimum,
+                                       reservoirScaling=reservoirScalingOptimum,
+                                       leakingRate=leakingRateOptimum,
+                                       initialTransient=initialTransient,
+                                       inputWeightConn=inputWeightConn,
+                                       reservoirWeightConn=reservoirWeightConn)
+        network.trainReservoir()
+
+        # Warm-up the network
+        trainingPredictedOutputData = network.predict(featureVectors)
+
+        # Store it and it will be used in the predictFuture method
+        self.esn = network
+
     def predictFuture(self, availableSeries, depth, horizon):
 
         # future series
@@ -153,3 +209,8 @@ class SeriesUtility:
 
             outplot.setSeries(seriesNameList[i], np.array(xAxis), series.values)
         outplot.createOutput()
+
+    def filterRecent(self, series, count):
+        data = series.values[-count:]
+        index = series.index[-count:]
+        return pd.Series(data=data, index=index)
