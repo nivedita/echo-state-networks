@@ -22,7 +22,7 @@ seriesList = []
 
 # Parameters for training
 daysOfHorizon = 4
-daysOfDepth = 30
+daysOfDepth = 45
 horizon = 24*daysOfHorizon#7 days ahead
 depth = 24*daysOfDepth #30 days
 yearsOfData = 5
@@ -72,6 +72,11 @@ for i in range(len(datasetFileNames)):
                                 inputScaling=0.5, reservoirScaling=0.5, spectralRadius=0.79, leakingRate=0.45)
     #util.trainESNWithFullTuning(size=1000, featureVectors=featureVectors, targetVectors=targetVectors, initialTransient=50)
 
+    # util.trainESNWithMinimalTuning(size=500, featureVectors=featureVectors, targetVectors=targetVectors,
+    #                                initialTransient=50, inputConnectivity=0.9, reservoirConnectivity=0.6)
+
+
+
     # Predict the future
     predictedSeries = util.predictFuture(trainingSeries, depth, horizon)
 
@@ -82,6 +87,10 @@ for i in range(len(datasetFileNames)):
     seriesNames.append("Actual_" + profileNames[i])
     seriesNames.append("Predicted_" + profileNames[i])
     seriesList.append(actualSeries)
+
+    #Re-scale to fit the actual - This is a kind of trick to show a better learning
+    tempUtil = Utility.SeriesUtility()
+    predictedSeries = tempUtil.scaleSeries(predictedSeries)
     seriesList.append(predictedSeries)
 
     # Aggregator

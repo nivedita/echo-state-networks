@@ -160,6 +160,48 @@ class SeriesUtility:
         # Store it and it will be used in the predictFuture method
         self.esn = network
 
+    def trainESNWithMinimalTuning(self, size, featureVectors, targetVectors, initialTransient, inputConnectivity, reservoirConnectivity):
+        inputScalingBound = (0.0, 1.0)
+        reservoirScalingBound = (0.0, 1.0)
+        spectralRadiusBound = (0.0, 1.0)
+        leakingRateBound = (0.0, 1.0)
+
+        reservoirToplogy = topology.RandomTopology(size=size,connectivity=reservoirConnectivity)
+
+        esnTuner = tuner.ESNTuner(size=size,
+                                  initialTransient=initialTransient,
+                                  trainingInputData=featureVectors,
+                                  trainingOutputData=targetVectors,
+                                  validationInputData=featureVectors,
+                                  validationOutputData=targetVectors,
+                                  spectralRadiusBound=spectralRadiusBound,
+                                  inputScalingBound=inputScalingBound,
+                                  reservoirScalingBound=reservoirScalingBound,
+                                  leakingRateBound=leakingRateBound,
+                                  reservoirTopology=reservoirToplogy,
+                                  inputConnectivity=inputConnectivity
+                                  )
+        spectralRadiusOptimum, inputScalingOptimum, reservoirScalingOptimum, leakingRateOptimum, inputWeightConn, reservoirWeightConn = esnTuner.getOptimalParameters()
+
+        network = esn.EchoStateNetwork(size=size,
+                                       inputData=featureVectors,
+                                       outputData=targetVectors,
+                                       reservoirTopology=reservoirToplogy,
+                                       spectralRadius=spectralRadiusOptimum,
+                                       inputScaling=inputScalingOptimum,
+                                       reservoirScaling=reservoirScalingOptimum,
+                                       leakingRate=leakingRateOptimum,
+                                       initialTransient=initialTransient,
+                                       inputWeightConn=inputWeightConn,
+                                       reservoirWeightConn=reservoirWeightConn)
+        network.trainReservoir()
+
+        # Warm-up the network
+        trainingPredictedOutputData = network.predict(featureVectors)
+
+        # Store it and it will be used in the predictFuture method
+        self.esn = network
+
     def predictFuture(self, availableSeries, depth, horizon):
 
         # future series
