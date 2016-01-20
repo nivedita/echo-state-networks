@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-from timeseries import TimeSeriesInterval as tsi
+from timeseries import TimeSeriesContinuousProcessor as processor, TimeSeriesInterval as tsi
 from reservoir import EchoStateNetwork as esn, ReservoirTopology as topology
 from sklearn import preprocessing as pp
 import os
@@ -32,10 +32,6 @@ class SeriesUtility:
             intersection.append(pd.Series(data=series[index], index=index))
         return intersection
 
-    #def aggregateSeries(self, seriesList, aggregationRule):
-
-    #def plotSeriesPrediction(self, seriesActual, seriesPredicted):
-
     def _sum(self, x):
         if len(x) == 0:
             return 0
@@ -48,8 +44,11 @@ class SeriesUtility:
         else:
             return 1
 
-    def resampleSeries(self, series, samplingRule):
+    def resampleSeriesExists(self, series, samplingRule):
         return series.resample(rule=samplingRule, how=self._exists)
+
+    def resampleSeriesSum(self, series, samplingRule):
+        return series.resample(rule=samplingRule, how=self._sum)
 
     def scaleSeries(self, series):
         self.scalingFunction = pp.MinMaxScaler((0,1))
@@ -77,6 +76,19 @@ class SeriesUtility:
         testingSeries = pd.Series(data=testingData.flatten(),index=testingIndex)
         return trainingSeries, testingSeries
 
+    def splitIntoTrainingAndValidationSeries(self, series, trainingSetRatio):
+        index = series.index
+        data = series.values
+        splitIndex = int(trainingSetRatio * data.shape[0])
+        trainingData = data[:splitIndex]
+        trainingIndex = index[:splitIndex]
+        validationData = data[splitIndex:]
+        validationIndex = index[splitIndex:]
+
+        trainingSeries = pd.Series(data=trainingData.flatten(),index=trainingIndex)
+        validationSeries = pd.Series(data=validationData.flatten(),index=validationIndex)
+        return trainingSeries, validationSeries
+
     def formFeatureAndTargetVectors(self, series, depth):
         # Feature list
         featureIntervalList = []
@@ -89,6 +101,16 @@ class SeriesUtility:
 
         # Pre-process the data and form feature and target vectors
         tsp = tsi.TimeSeriesIntervalProcessor(series, featureIntervalList, targetIntervalList)
+        featureVectors, targetVectors = tsp.getProcessedData()
+
+        # Append bias to feature vectors
+        featureVectors = np.hstack((np.ones((featureVectors.shape[0], 1)), featureVectors))
+
+        return featureVectors, targetVectors
+
+    def formContinousFeatureAndTargetVectors(self, series, depth):
+        # Pre-process the data and form feature and target vectors
+        tsp = processor.TimeSeriesContinuosProcessor(series, depth, horizon=1)
         featureVectors, targetVectors = tsp.getProcessedData()
 
         # Append bias to feature vectors
@@ -160,44 +182,34 @@ class SeriesUtility:
         # Store it and it will be used in the predictFuture method
         self.esn = network
 
-    def trainESNWithMinimalTuning(self, size, featureVectors, targetVectors, initialTransient, inputConnectivity, reservoirConnectivity):
-        inputScalingBound = (0.0, 1.0)
-        reservoirScalingBound = (0.0, 1.0)
-        spectralRadiusBound = (0.0, 1.0)
-        leakingRateBound = (0.0, 1.0)
+    def trainESNWithMinimalTuning(self, size, featureTrainingVectors, targetTrainingVectors,
+                                  featureValidationVectors, targetValidationVectors, initialTransient):
 
-        reservoirToplogy = topology.RandomTopology(size=size,connectivity=reservoirConnectivity)
+        inputConnectivityBound = (0.1,0.9)
+        probabilityBound = (0.1,0.9)
 
-        esnTuner = tuner.ESNTuner(size=size,
+        esnTuner = tuner.ESNErdosTuner(size=300,
                                   initialTransient=initialTransient,
-                                  trainingInputData=featureVectors,
-                                  trainingOutputData=targetVectors,
-                                  validationInputData=featureVectors,
-                                  validationOutputData=targetVectors,
-                                  spectralRadiusBound=spectralRadiusBound,
-                                  inputScalingBound=inputScalingBound,
-                                  reservoirScalingBound=reservoirScalingBound,
-                                  leakingRateBound=leakingRateBound,
-                                  reservoirTopology=reservoirToplogy,
-                                  inputConnectivity=inputConnectivity
-                                  )
-        spectralRadiusOptimum, inputScalingOptimum, reservoirScalingOptimum, leakingRateOptimum, inputWeightConn, reservoirWeightConn = esnTuner.getOptimalParameters()
+                                  trainingInputData=featureTrainingVectors,
+                                  trainingOutputData=targetTrainingVectors,
+                                  validationInputData=featureValidationVectors,
+                                  validationOutputData=targetValidationVectors,
+                                  inputConnectivityBound=inputConnectivityBound,
+                                  probabilityBound=probabilityBound,
+                                  times=3)
+        inputConnectivityOptimum, probabilityOptimum = esnTuner.getOptimalParameters()
 
         network = esn.EchoStateNetwork(size=size,
-                                       inputData=featureVectors,
-                                       outputData=targetVectors,
-                                       reservoirTopology=reservoirToplogy,
-                                       spectralRadius=spectralRadiusOptimum,
-                                       inputScaling=inputScalingOptimum,
-                                       reservoirScaling=reservoirScalingOptimum,
-                                       leakingRate=leakingRateOptimum,
+                                       inputData=featureTrainingVectors,
+                                       outputData=targetTrainingVectors,
+                                       reservoirTopology=topology.ErdosRenyiTopology(size=size,
+                                                                                     probability=probabilityOptimum),
                                        initialTransient=initialTransient,
-                                       inputWeightConn=inputWeightConn,
-                                       reservoirWeightConn=reservoirWeightConn)
+                                       inputConnectivity=inputConnectivityOptimum)
         network.trainReservoir()
 
-        # Warm-up the network
-        trainingPredictedOutputData = network.predict(featureVectors)
+        # # Warm-up the network
+        # trainingPredictedOutputData = network.predict(featureValidationVectors)
 
         # Store it and it will be used in the predictFuture method
         self.esn = network

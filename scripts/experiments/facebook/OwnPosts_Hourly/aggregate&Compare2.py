@@ -1,6 +1,9 @@
 from utility import Utility
 from datetime import datetime
 import pandas as pd
+import os
+import numpy as np
+from plotting import OutputTimeSeries as plotting
 
 # Dataset and profiles
 datasetFileNames = ["facebookPosts_timestamp_audi_time.csv", "facebookPosts_timestamp_benz_time.csv",
@@ -13,10 +16,6 @@ perspective = "Audi"
 competitors = ["Benz", "Dodge", "Ferrari"]
 
 # For plotting
-actualPerspective = None
-predictedPerspective = None
-actualCompetitor = pd.Series()
-predictedCompetitor = pd.Series()
 seriesNames = []
 seriesList = []
 
@@ -45,8 +44,23 @@ for i in range(len(datasetFileNames)):
 # Find intersection
 processedSeries = globalUtil.intersect(resampledSeries)
 
-
+# Aggregate the competitor series into one
+processedSeriesNew = []
+aggregatedCompetitor = pd.Series()
 for i in range(len(datasetFileNames)):
+    if profileNames[i] == perspective:
+        processedSeriesNew.append(processedSeries[i])
+    else:
+        if(aggregatedCompetitor.empty):
+            aggregatedCompetitor = processedSeries[i]
+        else:
+            aggregatedCompetitor = aggregatedCompetitor.add(processedSeries[i])
+processedSeriesNew.append(aggregatedCompetitor)
+processedSeries = processedSeriesNew
+profileNames = ["Audi", "Competitors(Benz, Dodge, Ferrari)"]
+
+# Start training for each series
+for i in range(len(processedSeries)):
 
     print("Processing Profile " + str(i+1) + "..")
 
@@ -69,7 +83,7 @@ for i in range(len(datasetFileNames)):
     #Train the network
     util.trainESNWithoutTuning(size=1500, featureVectors=featureVectors, targetVectors=targetVectors,
                                 initialTransient=50, inputConnectivity=0.9, reservoirConnectivity=0.8,
-                                inputScaling=0.5, reservoirScaling=0.5, spectralRadius=0.79, leakingRate=0.45)
+                                inputScaling=0.5, reservoirScaling=0.5, spectralRadius=0.60, leakingRate=0.45)
     #util.trainESNWithFullTuning(size=1000, featureVectors=featureVectors, targetVectors=targetVectors, initialTransient=50)
 
     # util.trainESNWithMinimalTuning(size=500, featureVectors=featureVectors, targetVectors=targetVectors,
@@ -88,32 +102,10 @@ for i in range(len(datasetFileNames)):
     seriesNames.append("Predicted_" + profileNames[i])
     seriesList.append(actualSeries)
 
-    #Re-scale to fit the actual - This is a kind of trick to show a better learning
-    # tempUtil = Utility.SeriesUtility()
-    # predictedSeries = tempUtil.scaleSeries(predictedSeries)
     seriesList.append(predictedSeries)
 
-    # Aggregator
-    if(profileNames[i] == perspective):  # Perspective
-        actualPerspective = actualSeries
-        predictedPerspective = predictedSeries
-    else: # Competitor
-        if(actualCompetitor.empty):  # Empty
-            actualCompetitor = actualSeries
-            predictedCompetitor = predictedSeries
-        else: # Not empty
-            actualCompetitor = actualCompetitor.add(actualSeries)
-            predictedCompetitor = predictedCompetitor.add(predictedSeries)
 
-# Average the results for competitor
-# actualCompetitor = actualCompetitor.divide(len(competitors))
-# predictedCompetitor = predictedCompetitor.divide(len(competitors))
-
-# Plot the results - aggregated
-seriesList.append(actualCompetitor)
-seriesList.append(predictedCompetitor)
-seriesNames.append("Actual Competitors")
-seriesNames.append("Predicted Competitors")
+# Plot the results
 details = "_yearsOfData_" + str(yearsOfData) + "_horizon_" + str(daysOfHorizon) + "_depth_" + str(daysOfDepth)
 globalUtil.plotSeries("Outputs/Outputs-Pandas_hourly_aggregated" + str(datetime.now()) + details,
                 seriesList, seriesNames, "Facebook Own posts - Aggregated", "Number of Posts")

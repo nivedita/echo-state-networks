@@ -8,14 +8,39 @@ class RandomTopology:
     def generateConnectivityMatrix(self):
         #Initialize the matrix to zeros
         connectivity = np.zeros((self.size, self.size))
-
-        indices1 = []
-        indices2 = []
         for i in range(self.size):
             indices = np.random.choice(self.size, size=int(self.connectivity * self.size), replace=False)
             connectivity[i, indices] = 1.0
-            for j in range(indices.shape[0]):
-                indices1.append(i)
-                indices2.append(indices[j])
-        randomIndices = np.array(indices1), np.array(indices2)
+        randomIndices = connectivity == 1.0
         return connectivity, randomIndices
+
+
+class ErdosRenyiTopology:
+    def __init__(self, size, probability):
+        self.size = size
+        self.probability = probability
+        self.expectedNumberOfLinks = None
+        self.averageDegree = None
+        self.clusteringCoefficient = None
+
+    def generateConnectivityMatrix(self):
+        random = np.random.rand(self.size, self.size)
+
+        connectivity = np.ones((self.size, self.size))
+        randomIndices = random > self.probability
+        connectivity[random > self.probability] = 0.0
+        return connectivity, randomIndices
+
+    def calculateNetworkParameters(self):
+
+        #Expected number of links
+        self.expectedNumberOfLinks = self.probability * self.size * (self.size - 1) / 2
+
+        return self.expectedNumberOfLinks
+
+
+
+
+
+
+

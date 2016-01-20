@@ -58,16 +58,10 @@ class EchoStateNetwork:
     def __generateInputConnectivityMatrix(self):
         #Initialize the matrix to zeros
         connectivity = np.zeros((self.Nx, self.Nu))
-
-        indices1 = []
-        indices2 = []
         for i in range(self.Nx):
             indices = np.random.choice(self.Nu, size=int(self.inputConnectivity * self.Nu), replace=False)
             connectivity[i, indices] = 1.0
-            for j in range(indices.shape[0]):
-                indices1.append(i)
-                indices2.append(indices[j])
-        randomIndices = np.array(indices1), np.array(indices2)
+        randomIndices = connectivity == 1.0
         return connectivity, randomIndices
 
     def __generateInputWeight(self):
