@@ -3,11 +3,27 @@ from reservoir import EchoStateNetwork, ReservoirTopology as topology
 from performance import RootMeanSquareError as rmse
 import numpy as np
 import gc
+from enum import Enum
+
+class Minimizer(Enum):
+    BasinHopping = 1
+    DifferentialEvolution = 2
+
+class ESNParameterBounds(object):
+     def __init__(self):
+         self.xmax = np.array([1.0, 1.0, 1.0, 1.0])
+         self.xmin = np.array([0.0, 0.0, 0.0, 0.0])
+
+     def __call__(self, **kwargs):
+         x = kwargs["x_new"]
+         tmax = bool(np.all(x <= self.xmax))
+         tmin = bool(np.all(x >= self.xmin))
+         return tmax and tmin
 
 class ESNTuner:
     def __init__(self, size, initialTransient, trainingInputData, trainingOutputData, validationInputData, validationOutputData,
                  spectralRadiusBound, inputScalingBound, reservoirScalingBound, leakingRateBound,
-                 reservoirTopology, inputConnectivity=0.6):
+                 reservoirTopology, inputConnectivity=0.6, minimizer=Minimizer.BasinHopping, initialGuess=np.array([0.79,0.5,0.5,0.3])):
         self.size = size
         self.initialTransient = initialTransient
         self.trainingInputData = trainingInputData
@@ -20,6 +36,8 @@ class ESNTuner:
         self.leakingRateBound = leakingRateBound
         self.reservoirTopology = reservoirTopology
         self.inputConnectivity = inputConnectivity
+        self.initialGuess = initialGuess
+        self.minimizer = minimizer
 
         #Create a echo state network
         esn = EchoStateNetwork.EchoStateNetwork(size=self.size,
@@ -31,7 +49,7 @@ class ESNTuner:
         self.reservoirWeightConn = esn.reservoirWeightRandom, esn.randomReservoirIndices
 
     def __ESNTrain__(self, x):
-
+        print("Parameters:"+str(x))
         #Extract the parameters
         spectralRadius = x[0]
         inputScaling = x[1]
@@ -68,89 +86,21 @@ class ESNTuner:
 
         #Return the error
 
-        print("Regression error"+str(regressionError)+"\n")
+        print("\nRegression error"+str(regressionError)+"\n")
         return regressionError
 
     def __tune__(self):
-        bounds = [self.spectralRadiusBound, self.inputScalingBound, self.reservoirScalingBound, self.leakingRateBound]
-        result = optimize.differential_evolution(self.__ESNTrain__,bounds=bounds)
-        return result.x[0], result.x[1], result.x[2], result.x[3], self.inputWeightConn, self.reservoirWeightConn
-
-    def getOptimalParameters(self):
-        return self.__tune__()
-
-class ESNTunerWithInitialGuess:
-    def __init__(self, size, initialTransient, trainingInputData, trainingOutputData, validationInputData, validationOutputData,
-                 spectralRadiusBound, inputScalingBound, reservoirScalingBound, leakingRateBound,
-                 reservoirTopology, inputConnectivity=0.6, initialGuess=None):
-        self.size = size
-        self.initialTransient = initialTransient
-        self.trainingInputData = trainingInputData
-        self.trainingOutputData = trainingOutputData
-        self.validationInputData = validationInputData
-        self.validationOutputData = validationOutputData
-        self.spectralRadiusBound = spectralRadiusBound
-        self.inputScalingBound = inputScalingBound
-        self.reservoirScalingBound = reservoirScalingBound
-        self.leakingRateBound = leakingRateBound
-        self.reservoirTopology = reservoirTopology
-        self.inputConnectivity = inputConnectivity
-
-        if(initialGuess == None):
-            self.initialGuess = [0.79, 0.5, 0.5, 0.3]
+        if(self.minimizer == Minimizer.DifferentialEvolution):
+            print("+++++Differential Evolution+++++++")
+            bounds = [self.spectralRadiusBound, self.inputScalingBound, self.reservoirScalingBound, self.leakingRateBound]
+            result = optimize.differential_evolution(self.__ESNTrain__,bounds=bounds)
         else:
-            self.initialGuess = initialGuess
-
-        #Create a echo state network
-        esn = EchoStateNetwork.EchoStateNetwork(size=self.size,
-                                                inputData=self.trainingInputData,
-                                                outputData=self.trainingOutputData,
-                                                reservoirTopology=self.reservoirTopology,
-                                                inputConnectivity=self.inputConnectivity)
-        self.inputWeightConn = esn.inputWeightRandom, esn.randomInputIndices
-        self.reservoirWeightConn = esn.reservoirWeightRandom, esn.randomReservoirIndices
-
-    def __ESNTrain__(self, x):
-
-        #Extract the parameters
-        spectralRadius = x[0]
-        inputScaling = x[1]
-        reservoirScaling = x[2]
-        leakingRate = x[3]
-
-        #Create the reservoir
-        esn = EchoStateNetwork.EchoStateNetwork(size=self.size,
-                                                inputData=self.trainingInputData,
-                                                outputData=self.trainingOutputData,
-                                                reservoirTopology=self.reservoirTopology,
-                                                spectralRadius=spectralRadius,
-                                                inputScaling=inputScaling,
-                                                reservoirScaling=reservoirScaling,
-                                                leakingRate=leakingRate,
-                                                initialTransient=self.initialTransient,
-                                                inputWeightConn=self.inputWeightConn,
-                                                reservoirWeightConn=self.reservoirWeightConn
-                                                )
-
-        #Train the reservoir
-        esn.trainReservoir()
-
-        #Predict for the validation data
-        predictedOutputData = esn.predict(self.validationInputData)
-
-        #Calcuate the regression error
-        errorFunction = rmse.RootMeanSquareError()
-        regressionError = errorFunction.compute(self.validationOutputData, predictedOutputData)
-
-        #Return the error
-
-        print("Regression error"+str(regressionError)+"\n")
-        return regressionError
-
-    def __tune__(self):
-        bounds = [self.spectralRadiusBound, self.inputScalingBound, self.reservoirScalingBound, self.leakingRateBound]
-        #result = optimize.differential_evolution(self.__ESNTrain__,bounds=bounds)
-        result = optimize.basinhopping(func=self.__ESNTrain__, x0=self.initialGuess, stepsize=0.05, niter=1)
+            print("+++++Basin Hopping+++++++")
+            boundCheck = ESNParameterBounds()
+            bounds = (self.spectralRadiusBound, self.inputScalingBound, self.reservoirScalingBound, self.leakingRateBound)
+            minimizer_kwargs = {"method":"TNC", "bounds":bounds}
+            result = optimize.basinhopping(self.__ESNTrain__, x0=self.initialGuess, accept_test=boundCheck, minimizer_kwargs=minimizer_kwargs)
+        print("The optimization results:"+str(result))
         return result.x[0], result.x[1], result.x[2], result.x[3], self.inputWeightConn, self.reservoirWeightConn
 
     def getOptimalParameters(self):
@@ -158,7 +108,7 @@ class ESNTunerWithInitialGuess:
 
 class ESNTunerWithConnectivity:
     def __init__(self, size, initialTransient, trainingInputData, trainingOutputData, validationInputData, validationOutputData,
-                 spectralRadiusBound, inputScalingBound, reservoirScalingBound, leakingRateBound, inputConnectivityBound, reservoirConnectivityBound):
+                 spectralRadiusBound, inputScalingBound, reservoirScalingBound, leakingRateBound, inputConnectivityBound, reservoirConnectivityBound, times=10):
         self.size = size
         self.initialTransient = initialTransient
         self.trainingInputData = trainingInputData
@@ -171,6 +121,7 @@ class ESNTunerWithConnectivity:
         self.leakingRateBound = leakingRateBound
         self.inputConnectivityBound = inputConnectivityBound
         self.reservoirConnectivityBound = reservoirConnectivityBound
+        self.times = times
 
         self.inputWeightConn = None
         self.reservoirWeightConn = None
@@ -182,7 +133,7 @@ class ESNTunerWithConnectivity:
         reservoirTopology = topology.RandomTopology(size=self.size, connectivity=reservoirConnectivity)
 
         cumRMSE = 0
-        times = 10
+        times = self.times
         #Run many times - just to get rid of randomness in assigning random weights
         for i in range(times):
 
@@ -389,73 +340,10 @@ class ESNMinimalTunerWithConnectivity:
     def getOptimalParameters(self):
         return self.__tune__()
 
-class ESNMinimalTuner:
-    def __init__(self, size, initialTransient, trainingInputData, trainingOutputData, validationInputData, validationOutputData,
-                 spectralRadiusBound, reservoirTopology, inputConnectivity=0.6):
-        self.size = size
-        self.initialTransient = initialTransient
-        self.trainingInputData = trainingInputData
-        self.trainingOutputData = trainingOutputData
-        self.validationInputData = validationInputData
-        self.validationOutputData = validationOutputData
-        self.spectralRadiusBound = spectralRadiusBound
-        self.reservoirTopology = reservoirTopology
-        self.inputConnectivity = inputConnectivity
-
-        #Create a echo state network
-        esn = EchoStateNetwork.EchoStateNetwork(size=self.size,
-                                                inputData=self.trainingInputData,
-                                                outputData=self.trainingOutputData,
-                                                reservoirTopology=self.reservoirTopology,
-                                                inputConnectivity=self.inputConnectivity)
-        self.inputWeightConn = esn.inputWeightRandom, esn.randomInputIndices
-        self.reservoirWeightConn = esn.reservoirWeightRandom, esn.randomReservoirIndices
-
-    def __ESNTrain__(self, x):
-
-        #Extract the parameters
-        spectralRadius = x[0]
-
-        #Create the reservoir
-        esn = EchoStateNetwork.EchoStateNetwork(size=self.size,
-                                                inputData=self.trainingInputData,
-                                                outputData=self.trainingOutputData,
-                                                reservoirTopology=self.reservoirTopology,
-                                                spectralRadius=spectralRadius,
-                                                initialTransient=self.initialTransient,
-                                                inputWeightConn=self.inputWeightConn,
-                                                reservoirWeightConn=self.reservoirWeightConn
-                                                )
-
-        #Train the reservoir
-        esn.trainReservoir()
-
-        #Predict for the validation data
-        predictedOutputData = esn.predict(self.validationInputData)
-
-        #Calcuate the regression error
-        errorFunction = rmse.RootMeanSquareError()
-        regressionError = errorFunction.compute(self.validationOutputData, predictedOutputData)
-
-        #Free the memory
-        gc.collect()
-
-        #Return the error
-
-        print("Regression error"+str(regressionError)+"\n")
-        return regressionError
-
-    def __tune__(self):
-        bounds = [self.spectralRadiusBound]
-        result = optimize.differential_evolution(self.__ESNTrain__,bounds=bounds)
-        return result.x[0], self.inputWeightConn, self.reservoirWeightConn
-
-    def getOptimalParameters(self):
-        return self.__tune__()
 
 class ESNConnTuner:
     def __init__(self, size, initialTransient, trainingInputData, trainingOutputData, validationInputData, validationOutputData,
-                 inputConnectivityBound, reservoirConnectivityBound):
+                 inputConnectivityBound, reservoirConnectivityBound, times= 10):
         self.size = size
         self.initialTransient = initialTransient
         self.trainingInputData = trainingInputData
@@ -464,6 +352,7 @@ class ESNConnTuner:
         self.validationOutputData = validationOutputData
         self.inputConnectivityBound = inputConnectivityBound
         self.reservoirConnectivityBound = reservoirConnectivityBound
+        self.times = times
 
 
     def __ESNTrain__(self, x):
@@ -473,27 +362,32 @@ class ESNConnTuner:
         reservoirConnectivity = x[1]
         reservoirTopology = topology.RandomTopology(size=self.size, connectivity=reservoirConnectivity)
 
-        #Create the network
-        esn = EchoStateNetwork.EchoStateNetwork(size=self.size,
-                                                inputData=self.trainingInputData,
-                                                outputData=self.trainingOutputData,
-                                                reservoirTopology=reservoirTopology,
-                                                inputConnectivity=inputConnectivity
-                                                )
+        cumRMSE = 0
+        times = self.times
+        for i in range(times):
+            #Create the network
+            esn = EchoStateNetwork.EchoStateNetwork(size=self.size,
+                                                    inputData=self.trainingInputData,
+                                                    outputData=self.trainingOutputData,
+                                                    reservoirTopology=reservoirTopology,
+                                                    inputConnectivity=inputConnectivity
+                                                    )
 
-        #Train the reservoir
-        esn.trainReservoir()
+            #Train the reservoir
+            esn.trainReservoir()
 
-        #Predict for the validation data
-        predictedOutputData = esn.predict(self.validationInputData)
+            #Predict for the validation data
+            predictedOutputData = esn.predict(self.validationInputData)
 
-        #Calcuate the regression error
-        errorFunction = rmse.RootMeanSquareError()
-        regressionError = errorFunction.compute(self.validationOutputData, predictedOutputData)
+            #Calcuate the regression error
+            errorFunction = rmse.RootMeanSquareError()
+            regressionError = errorFunction.compute(self.validationOutputData, predictedOutputData)
+            cumRMSE += regressionError
 
-        #Free the memory
-        gc.collect()
+            #Free the memory
+            gc.collect()
 
+        regressionError = cumRMSE / times
         #Return the error
         print("Optimizing connectivity..")
         print("\nRegression error:"+str(regressionError)+"\n")
@@ -503,8 +397,6 @@ class ESNConnTuner:
         bounds = [self.inputConnectivityBound, self.reservoirConnectivityBound]
         result = optimize.differential_evolution(self.__ESNTrain__,bounds=bounds)
         return result.x[0], result.x[1]
-
-        # Brute Force
 
     def getOptimalParameters(self):
         return self.__tune__()
@@ -557,7 +449,7 @@ class ESNErdosTuner:
             #Free the memory
             gc.collect()
 
-        regressionError = cumRMSE / times
+        regressionError = cumRMSE/times
         #Return the error
         print("Optimizing connectivity..")
         print("\nRegression error:"+str(regressionError)+"\n")
@@ -571,9 +463,11 @@ class ESNErdosTuner:
     def getOptimalParameters(self):
         return self.__tune__()
 
+
+
 class ESNErdosFullTuner:
     def __init__(self, size, initialTransient, trainingInputData, trainingOutputData, validationInputData, validationOutputData,
-                 spectralRadiusBound, inputScalingBound, reservoirScalingBound, leakingRateBound, inputConnectivityBound, probabilityBound):
+                 spectralRadiusBound, inputScalingBound, reservoirScalingBound, leakingRateBound, inputConnectivityBound, probabilityBound, times=10):
         self.size = size
         self.initialTransient = initialTransient
         self.trainingInputData = trainingInputData
@@ -586,6 +480,7 @@ class ESNErdosFullTuner:
         self.leakingRateBound = leakingRateBound
         self.inputConnectivityBound = inputConnectivityBound
         self.probabilityBound = probabilityBound
+        self.times = times
 
         self.inputWeightConn = None
         self.reservoirWeightConn = None
@@ -692,6 +587,261 @@ class ESNErdosFullTuner:
         bounds = [self.spectralRadiusBound, self.inputScalingBound, self.reservoirScalingBound, self.leakingRateBound]
         result = optimize.differential_evolution(self.__ESNTrain__,bounds=bounds)
         return result.x[0], result.x[1], result.x[2], result.x[3], self.inputWeightConn, self.reservoirWeightConn
+
+    def getOptimalParameters(self):
+        return self.__tune__()
+
+class ESNSmallWorldGraphsTuner:
+    def __init__(self, size, initialTransient, trainingInputData, trainingOutputData, validationInputData, validationOutputData,
+                 inputConnectivityBound, meanDegreeBound, betaBound, times=10):
+        self.size = size
+        self.initialTransient = initialTransient
+        self.trainingInputData = trainingInputData
+        self.trainingOutputData = trainingOutputData
+        self.validationInputData = validationInputData
+        self.validationOutputData = validationOutputData
+        self.inputConnectivityBound = inputConnectivityBound
+        self.meanDegreeBound = meanDegreeBound
+        self.betaBound = betaBound
+        self.times = times
+
+
+    def __ESNTrain__(self, x):
+
+        #Extract the parameters
+        inputConnectivity = x[0]
+        meanDegree = int(np.floor(x[1]))
+        beta = x[2]
+        reservoirTopology = topology.SmallWorldGraphs(size=self.size, meanDegree=meanDegree, beta=beta)
+        print("\nOptimizing connectivity..")
+        print("\nParameters:"+str(x))
+
+        cumRMSE = 0
+        times = self.times
+        for i in range(times):
+            #Create the network
+            esn = EchoStateNetwork.EchoStateNetwork(size=self.size,
+                                                    inputData=self.trainingInputData,
+                                                    outputData=self.trainingOutputData,
+                                                    reservoirTopology=reservoirTopology,
+                                                    inputConnectivity=inputConnectivity
+                                                    )
+
+            #Train the reservoir
+            esn.trainReservoir()
+
+            #Predict for the validation data
+            predictedOutputData = esn.predict(self.validationInputData)
+
+            #Calcuate the regression error
+            errorFunction = rmse.RootMeanSquareError()
+            regressionError = errorFunction.compute(self.validationOutputData, predictedOutputData)
+            cumRMSE += regressionError
+
+            #Free the memory
+            gc.collect()
+
+        regressionError = cumRMSE / times
+        #Return the error
+        print("\nRegression error:"+str(regressionError)+"\n")
+        return regressionError
+
+    def __tune__(self):
+        bounds = [self.inputConnectivityBound, self.meanDegreeBound, self.betaBound]
+        result = optimize.differential_evolution(self.__ESNTrain__,bounds=bounds)
+        return result.x[0], int(np.floor(result.x[1])), result.x[2]
+
+    def getOptimalParameters(self):
+        return self.__tune__()
+
+class ESNSmallWorldGraphsFullTuner:
+    def __init__(self, size, initialTransient, trainingInputData, trainingOutputData, validationInputData, validationOutputData,
+                 spectralRadiusBound, inputScalingBound, reservoirScalingBound, leakingRateBound, inputConnectivityBound, meanDegreeBound, betaBound, times=10):
+        self.size = size
+        self.initialTransient = initialTransient
+        self.trainingInputData = trainingInputData
+        self.trainingOutputData = trainingOutputData
+        self.validationInputData = validationInputData
+        self.validationOutputData = validationOutputData
+        self.spectralRadiusBound = spectralRadiusBound
+        self.inputScalingBound = inputScalingBound
+        self.reservoirScalingBound = reservoirScalingBound
+        self.leakingRateBound = leakingRateBound
+        self.inputConnectivityBound = inputConnectivityBound
+        self.meanDegreeBound = meanDegreeBound
+        self.betaBound = betaBound
+        self.times = times
+
+        self.inputWeightConn = None
+        self.reservoirWeightConn = None
+
+    def __ESNConnTrain__(self, x):
+        #Extract the parameters
+        inputConnectivity = x[0]
+        meanDegree = int(np.floor(x[1]))
+        beta = x[2]
+        reservoirTopology = topology.SmallWorldGraphs(size=self.size, meanDegree=meanDegree, beta=beta)
+        print("\nParameters:"+str(x))
+
+        cumRMSE = 0
+        times = 10
+        #Run many times - just to get rid of randomness in assigning random weights
+        for i in range(times):
+
+            #Create the network
+            esn = EchoStateNetwork.EchoStateNetwork(size=self.size,
+                                                    inputData=self.trainingInputData,
+                                                    outputData=self.trainingOutputData,
+                                                    reservoirTopology=reservoirTopology,
+                                                    inputConnectivity=inputConnectivity
+                                                    )
+
+            #Train the reservoir
+            esn.trainReservoir()
+
+            #Predict for the validation data
+            predictedOutputData = esn.predict(self.validationInputData)
+
+            #Calcuate the regression error
+            errorFunction = rmse.RootMeanSquareError()
+            regressionError = errorFunction.compute(self.validationOutputData, predictedOutputData)
+            cumRMSE += regressionError
+
+            #Free the memory
+            gc.collect()
+
+        regressionError = cumRMSE / times
+
+        #Return the error
+        print("Regression error"+str(regressionError)+"\n")
+        return regressionError
+
+    def __ESNTrain__(self, x):
+        print("\nOptimizing esn parameters:"+str(x))
+        #Extract the parameters
+        spectralRadius = x[0]
+        inputScaling = x[1]
+        reservoirScaling = x[2]
+        leakingRate = x[3]
+
+        #Create the reservoir
+        esn = EchoStateNetwork.EchoStateNetwork(size=self.size,
+                                                inputData=self.trainingInputData,
+                                                outputData=self.trainingOutputData,
+                                                spectralRadius=spectralRadius,
+                                                inputScaling=inputScaling,
+                                                reservoirScaling=reservoirScaling,
+                                                leakingRate=leakingRate,
+                                                initialTransient=self.initialTransient,
+                                                inputWeightConn=self.inputWeightConn,
+                                                reservoirWeightConn=self.reservoirWeightConn,
+                                                reservoirTopology=topology.SmallWorldGraphs(size=self.size,
+                                                                                            meanDegree=self.meanDegreeOptimum,
+                                                                                            beta=self.betaOptimum))
+
+        #Train the reservoir
+        esn.trainReservoir()
+
+        #Predict for the validation data
+        predictedOutputData = esn.predict(self.validationInputData)
+
+        #Calcuate the regression error
+        errorFunction = rmse.RootMeanSquareError()
+        regressionError = errorFunction.compute(self.validationOutputData, predictedOutputData)
+
+        #Free the memory
+        gc.collect()
+
+        #Return the error
+        print("Regression error"+str(regressionError)+"\n")
+        return regressionError
+
+    def __tune__(self):
+
+        # First tune for the input connectivity and the reservoir connectivity
+        connBounds = [self.inputConnectivityBound,self.meanDegreeBound, self.betaBound]
+        connResult = optimize.differential_evolution(self.__ESNConnTrain__,bounds=connBounds)
+        self.inputConnectivityOptimum = connResult.x[0]
+        self.meanDegreeOptimum = int(np.floor(connResult.x[1]))
+        self.betaOptimum = connResult.x[2]
+
+        # With tuned parameters, create the network with optimal connections and keep the connections as same
+        esn = EchoStateNetwork.EchoStateNetwork(size=self.size,
+                                                inputData=self.trainingInputData,
+                                                outputData=self.trainingOutputData,
+                                                reservoirTopology=topology.SmallWorldGraphs(size=self.size,
+                                                                                            meanDegree=self.meanDegreeOptimum,
+                                                                                            beta=self.betaOptimum),
+                                                inputConnectivity=self.inputConnectivityOptimum)
+        self.inputWeightConn = esn.inputWeightRandom, esn.randomInputIndices
+        self.reservoirWeightConn = esn.reservoirWeightRandom, esn.randomReservoirIndices
+
+        # Tune the other parameters
+        bounds = [self.spectralRadiusBound, self.inputScalingBound, self.reservoirScalingBound, self.leakingRateBound]
+        result = optimize.differential_evolution(self.__ESNTrain__,bounds=bounds)
+        return result.x[0], result.x[1], result.x[2], result.x[3], self.inputWeightConn, self.reservoirWeightConn
+
+    def getOptimalParameters(self):
+        return self.__tune__()
+
+class ESNScaleFreeNetworksTuner:
+    def __init__(self, size, initialTransient, trainingInputData, trainingOutputData, validationInputData, validationOutputData,
+                 inputConnectivityBound, attachmentBound, times=10):
+        self.size = size
+        self.initialTransient = initialTransient
+        self.trainingInputData = trainingInputData
+        self.trainingOutputData = trainingOutputData
+        self.validationInputData = validationInputData
+        self.validationOutputData = validationOutputData
+        self.inputConnectivityBound = inputConnectivityBound
+        self.attachmentBound = attachmentBound
+        self.times = times
+
+
+    def __ESNTrain__(self, x):
+
+        #Extract the parameters
+        inputConnectivity = x[0]
+        attachment = int(np.floor(x[1]))
+
+        reservoirTopology = topology.ScaleFreeNetworks(size=self.size, attachmentCount=attachment)
+        print("\nOptimizing connectivity..")
+        print("\nInput Connectivity:"+str(inputConnectivity)+ " Attachment:"+str(attachment))
+
+        cumRMSE = 0
+        times = self.times
+        for i in range(times):
+            #Create the network
+            esn = EchoStateNetwork.EchoStateNetwork(size=self.size,
+                                                    inputData=self.trainingInputData,
+                                                    outputData=self.trainingOutputData,
+                                                    reservoirTopology=reservoirTopology,
+                                                    inputConnectivity=inputConnectivity
+                                                    )
+
+            #Train the reservoir
+            esn.trainReservoir()
+
+            #Predict for the validation data
+            predictedOutputData = esn.predict(self.validationInputData)
+
+            #Calcuate the regression error
+            errorFunction = rmse.RootMeanSquareError()
+            regressionError = errorFunction.compute(self.validationOutputData, predictedOutputData)
+            cumRMSE += regressionError
+
+            #Free the memory
+            gc.collect()
+
+        regressionError = cumRMSE / times
+        #Return the error
+        print("\nRegression error:"+str(regressionError)+"\n")
+        return regressionError
+
+    def __tune__(self):
+        bounds = [self.inputConnectivityBound, self.attachmentBound]
+        result = optimize.differential_evolution(self.__ESNTrain__,bounds=bounds)
+        return result.x[0], int(np.floor(result.x[1]))
 
     def getOptimalParameters(self):
         return self.__tune__()

@@ -3,7 +3,7 @@ from datetime import datetime
 
 
 datasetFileName = "facebookPosts_timestamp_bmw_time.csv"
-daysOfHorizon = 4
+daysOfHorizon = 8
 daysOfDepth = 45
 horizon = 24*daysOfHorizon#7 days ahead
 depth = 24*daysOfDepth #30 days
@@ -13,7 +13,7 @@ util = Utility.SeriesUtility()
 series = util.convertDatasetsToSeries(datasetFileName)
 
 # Step 2 - Resample the series (to hourly)
-resampledSeries = util.resampleSeriesSum(series, "H")
+resampledSeries = util.resampleSeriesExists(series, "H")
 del series
 
 
@@ -59,4 +59,4 @@ predictedSeries = util.descaleSeries(predictedSeries)
 # Step 9 - Plot the results
 details = "_yearsOfData_" + str(yearsOfData) + "_horizon_" + str(daysOfHorizon) + "_depth_" + str(daysOfDepth)
 util.plotSeries("Outputs/Outputs-Pandas_weekly_daily" + str(datetime.now()) + details,
-                [actualSeries, predictedSeries], ["Actual Output", "Predicted Output"], "Facebook Own posts-BMW", "Number of Posts")
+                [actualSeries, predictedSeries], ["Actual Output", "Predicted Output"], "Facebook Own posts-BMW", "Existence of Posts")

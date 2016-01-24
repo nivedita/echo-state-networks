@@ -31,67 +31,56 @@ testActualOutputData = data[nTraining+1:nTraining+nTesting+1].reshape((nTesting,
 
 
 #Tune and Train
-spectralRadiusBound = (0.0, 1.25)
-inputScalingBound = (0.0, 1.0)
-reservoirScalingBound = (0.0, 1.0)
-leakingRateBound = (0.0, 1.0)
 size = 100
 initialTransient = 5
-inputConnectivity = 0.7
-reservoirTopology = topology.RandomTopology(size=size, connectivity=0.3)
-inputConnectivityBound = (0.51,1.0)
-reservoirConnectivityBound = (0.0, 1.0)
-# esnTuner = tuner.ESNTuner(size=size,
+inputConnectivity = 0.6
+reservoirTopology = topology.RandomTopology(size=size, connectivity=0.9)
+# esnTuner = tuner.ESNBasinHoppingTuner(size=size,
 #                      initialTransient=initialTransient,
 #                      trainingInputData=trainingInputData,
 #                      trainingOutputData=trainingOutputData,
 #                      validationInputData=trainingInputData,
 #                      validationOutputData=trainingOutputData,
-#                      spectralRadiusBound=spectralRadiusBound,
-#                      inputScalingBound=inputScalingBound,
-#                      reservoirScalingBound=reservoirScalingBound,
-#                      leakingRateBound=leakingRateBound,
+#                      spectralRadiusInitial=0.79,
+#                      inputScalingInitial=0.5,
+#                      reservoirScalingInitial=0.5,
+#                      leakingRateInitial=0.3,
 #                      reservoirTopology=reservoirTopology,
 #                      inputConnectivity=inputConnectivity)
-# spectralRadiusOptimum, inputScalingOptimum, reservoirScalingOptimum, leakingRateOptimum, inputWeightConn, reservoirWeightConn = esnTuner.getOptimalParameters()
-#
-# network = esn.EchoStateNetwork(size=size,
-#                                inputData=trainingInputData,
-#                                outputData=trainingOutputData,
-#                                reservoirTopology=reservoirTopology,
-#                                spectralRadius=spectralRadiusOptimum,
-#                                inputScaling=inputScalingOptimum,
-#                                reservoirScaling=reservoirScalingOptimum,
-#                                leakingRate=leakingRateOptimum,
-#                                initialTransient=initialTransient,
-#                                inputConnectivity=inputConnectivity,
-#                                inputWeightConn=inputWeightConn,
-#                                reservoirWeightConn=reservoirWeightConn)
-# network.trainReservoir()
 
-esnTuner = tuner.ESNMinimalTunerWithConnectivity(size=size,
-                     initialTransient=initialTransient,
-                     trainingInputData=trainingInputData,
-                     trainingOutputData=trainingOutputData,
-                     validationInputData=trainingInputData,
-                     validationOutputData=trainingOutputData,
-                     spectralRadiusBound=spectralRadiusBound,
-                     leakingRateBound=leakingRateBound,
-                     inputConnectivityBound=inputConnectivityBound,
-                     reservoirConnectivityBound=reservoirConnectivityBound)
-spectralRadiusOptimum, leakingRateOptimum, inputWeightConn, reservoirWeightConn = esnTuner.getOptimalParameters()
+inputScalingBound = reservoirScalingBound = leakingRateBound = spectralRadiusBound = (0.0, 1.0)
+esnTuner = tuner.ESNTuner(size=size,
+                          initialTransient=initialTransient,
+                          trainingInputData=trainingInputData,
+                          trainingOutputData=trainingOutputData,
+                          validationInputData=trainingInputData,
+                          validationOutputData=trainingOutputData,
+                          inputScalingBound=inputScalingBound,
+                          reservoirScalingBound=reservoirScalingBound,
+                          leakingRateBound=leakingRateBound,
+                          spectralRadiusBound=spectralRadiusBound,
+                          reservoirTopology=reservoirTopology,
+                          inputConnectivity=inputConnectivity,
+                          minimizer=tuner.Minimizer.DifferentialEvolution
+                          )
+
+
+spectralRadiusOptimum, inputScalingOptimum, reservoirScalingOptimum, leakingRateOptimum, inputWeightConn, reservoirWeightConn = esnTuner.getOptimalParameters()
 
 network = esn.EchoStateNetwork(size=size,
                                inputData=trainingInputData,
                                outputData=trainingOutputData,
                                reservoirTopology=reservoirTopology,
                                spectralRadius=spectralRadiusOptimum,
+                               inputScaling=inputScalingOptimum,
+                               reservoirScaling=reservoirScalingOptimum,
                                leakingRate=leakingRateOptimum,
                                initialTransient=initialTransient,
                                inputConnectivity=inputConnectivity,
                                inputWeightConn=inputWeightConn,
                                reservoirWeightConn=reservoirWeightConn)
 network.trainReservoir()
+
 
 #Warm up for the trained data
 predictedTrainingOutputData = network.predict(trainingInputData)

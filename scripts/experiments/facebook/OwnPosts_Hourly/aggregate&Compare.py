@@ -21,7 +21,7 @@ seriesNames = []
 seriesList = []
 
 # Parameters for training
-daysOfHorizon = 4
+daysOfHorizon = 10
 daysOfDepth = 45
 horizon = 24*daysOfHorizon#7 days ahead
 depth = 24*daysOfDepth #30 days

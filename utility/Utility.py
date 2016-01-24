@@ -44,11 +44,20 @@ class SeriesUtility:
         else:
             return 1
 
+    def _mean(self, x):
+        if len(x) == 0:
+            return 0
+        else:
+            return sum(x)/len(x)
+
     def resampleSeriesExists(self, series, samplingRule):
         return series.resample(rule=samplingRule, how=self._exists)
 
     def resampleSeriesSum(self, series, samplingRule):
         return series.resample(rule=samplingRule, how=self._sum)
+
+    def resampleSeriesMean(self, series, samplingRule):
+        return series.resample(rule=samplingRule, how=self._mean)
 
     def scaleSeries(self, series):
         self.scalingFunction = pp.MinMaxScaler((0,1))

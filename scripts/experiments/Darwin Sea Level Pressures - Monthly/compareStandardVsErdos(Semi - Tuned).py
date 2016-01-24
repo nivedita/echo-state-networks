@@ -42,7 +42,8 @@ esnTuner = tuner.ESNErdosTuner(size=size,
                             validationInputData=inputTrainingData,
                             validationOutputData=outputTrainingData,
                             inputConnectivityBound=inputConnectivityBound,
-                            probabilityBound=probabilityBound)
+                            probabilityBound=probabilityBound,
+                            times=5)
 inputConnectivityOptimum, probabilityOptimum = esnTuner.getOptimalParameters()
 res = esn.EchoStateNetwork(size=size,
                            inputData=inputTrainingData,

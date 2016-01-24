@@ -1,4 +1,6 @@
 import numpy as np
+import networkx as nx
+import matplotlib.pyplot as plt
 
 class RandomTopology:
     def __init__(self, size, connectivity):
@@ -19,24 +21,49 @@ class ErdosRenyiTopology:
     def __init__(self, size, probability):
         self.size = size
         self.probability = probability
-        self.expectedNumberOfLinks = None
-        self.averageDegree = None
-        self.clusteringCoefficient = None
+        self.network = nx.erdos_renyi_graph(self.size, self.probability)
+    # def generateConnectivityMatrix(self):
+    #     random = np.random.rand(self.size, self.size)
+    #
+    #     connectivity = np.ones((self.size, self.size))
+    #     randomIndices = random > self.probability
+    #     connectivity[random > self.probability] = 0.0
+    #     return connectivity, randomIndices
 
     def generateConnectivityMatrix(self):
-        random = np.random.rand(self.size, self.size)
-
-        connectivity = np.ones((self.size, self.size))
-        randomIndices = random > self.probability
-        connectivity[random > self.probability] = 0.0
+        connectivity = np.asarray(nx.to_numpy_matrix(self.network))
+        randomIndices = connectivity == 1
         return connectivity, randomIndices
 
-    def calculateNetworkParameters(self):
+class SmallWorldGraphs:
+    def __init__(self, size, meanDegree, beta):
+        self.size = size
+        self.meanDegree = meanDegree
+        self.beta = beta
+        self.network = nx.newman_watts_strogatz_graph(self.size,self.meanDegree,self.beta) #No edges are removed in newman implementation (So, atleast we get a ring lattice)
 
-        #Expected number of links
-        self.expectedNumberOfLinks = self.probability * self.size * (self.size - 1) / 2
+    def generateConnectivityMatrix(self):
+        connectivity = np.asarray(nx.to_numpy_matrix(self.network))
+        randomIndices = connectivity == 1.0
+        return connectivity, randomIndices
 
-        return self.expectedNumberOfLinks
+class ScaleFreeNetworks:
+    def __init__(self, size, attachmentCount):
+        self.size = size
+        self.m = attachmentCount
+        self.network = nx.barabasi_albert_graph(self.size, self.m)
+
+    def generateConnectivityMatrix(self):
+        connectivity = np.asarray(nx.to_numpy_matrix(self.network))
+        randomIndices = connectivity == 1.0
+        return connectivity, randomIndices
+
+
+if __name__ == '__main__':
+    scaleNw = ScaleFreeNetworks(10, 2)
+    nx.draw_circular(scaleNw.network)
+    plt.savefig("test.png")
+
 
 
 

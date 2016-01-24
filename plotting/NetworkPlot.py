@@ -2,12 +2,13 @@ import numpy as np
 from reservoir import ReservoirTopology as topology
 
 class NetworkPlot:
-    def __init__(self, fileName, title, networkConnectivityMatrix):
+    def __init__(self, fileName, dataName, title, networkConnectivityMatrix):
         self.title = title
         self.conn = networkConnectivityMatrix
 
         self.f = open(fileName, 'w')
-        self.data = open("data.json", 'w')
+        self.dataName = dataName+".json"
+        self.data = open(self.dataName, 'w')
 
     def __generateHTMLOutput(self):
         self.f.write('\n<!DOCTYPE html>')
@@ -42,7 +43,7 @@ class NetworkPlot:
         self.f.write('.attr("width", width)')
         self.f.write('.attr("height", height);')
 
-        self.f.write('d3.json("data.json", function(error, graph) {')
+        self.f.write('d3.json("'+self.dataName+'", function(error, graph) {')
         self.f.write('if (error) throw error;')
 
         self.f.write('force')
