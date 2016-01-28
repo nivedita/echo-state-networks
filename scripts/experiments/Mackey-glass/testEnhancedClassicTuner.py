@@ -20,10 +20,10 @@ minMax = pp.MinMaxScaler((-1,1))
 data = minMax.fit_transform(data)
 
 #Get only 4000 points
-data = data[:5000].reshape((5000, 1))
+data = data[:4000].reshape((4000, 1))
 
 # Split the data into training, validation and testing
-trainingData, validationData, testingData = util.splitData(data, 0.4, 0.4, 0.2)
+trainingData, validationData, testingData = util.splitData(data, 0.5, 0.25, 0.25)
 nValidation = validationData.shape[0]
 nTesting = testingData.shape[0]
 
