@@ -10,7 +10,7 @@ class Minimizer(Enum):
     DifferentialEvolution = 2
 
 class ParameterStep(object):
-    def __init__(self, stepsize=0.001):
+    def __init__(self, stepsize=0.005):
         self.stepsize = stepsize
     def __call__(self, x):
         x += self.stepsize
@@ -96,9 +96,9 @@ class ReservoirTuner:
             return result.x[0], result.x[1], result.x[2], result.x[3]
         else:
             bounds = [self.spectralRadiusBound, self.inputScalingBound, self.reservoirScalingBound, self.leakingRateBound]
-            minimizer_kwargs = {"method": "TNC", "bounds":bounds, "options": {"eps":0.001}}
+            minimizer_kwargs = {"method": "TNC", "bounds":bounds, "options": {"eps":0.005}}
             mytakestep = ParameterStep()
-            result = optimize.basinhopping(self.__reservoirTrain__, x0=self.initialGuess, minimizer_kwargs=minimizer_kwargs, take_step=mytakestep, stepsize=0.001)
+            result = optimize.basinhopping(self.__reservoirTrain__, x0=self.initialGuess, minimizer_kwargs=minimizer_kwargs, take_step=mytakestep, stepsize=0.005)
             print("The Optimization results are :"+str(result))
             return result.x[0], result.x[1], result.x[2], result.x[3]
 
