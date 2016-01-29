@@ -8,7 +8,7 @@ profileName = sys.argv[1]
 datasetFileName = profileName + "_time_interaction_rate.csv"
 
 daysOfHorizon = 10
-daysOfDepth = 14
+daysOfDepth = 21
 horizon = 24*daysOfHorizon#7 days ahead
 depth = 24*daysOfDepth #30 days
 util = Utility.SeriesUtility()
@@ -41,10 +41,10 @@ featureTrainingVectors, targetTrainingVectors = util.formContinousFeatureAndTarg
 
 
 # Step 6 - Train the network
-networkSize = 500
+networkSize = 1500
 util.trainESNWithoutTuning(size=networkSize, featureVectors=featureTrainingVectors, targetVectors=targetTrainingVectors,
                             initialTransient=50, inputConnectivity=0.7, reservoirConnectivity=0.9,
-                            inputScaling=0.5, reservoirScaling=0.5, spectralRadius=0.79, leakingRate=0.20)
+                            inputScaling=0.6, reservoirScaling=0.5, spectralRadius=0.79, leakingRate=0.20)
 
 # util.trainESNWithMinimalTuning(size=1500,
 #                                featureTrainingVectors=featureTrainingVectors,
@@ -61,6 +61,6 @@ actualSeries = util.descaleSeries(testingSeries)
 predictedSeries = util.descaleSeries(predictedSeries)
 
 # Step 9 - Plot the results
-details = "_yearsOfData_" + str(yearsOfData) + "_horizon_" + str(daysOfHorizon) + "_depth_" + str(daysOfDepth) + "_network_size_" + str(networkSize)
+details = profileName + "_yearsOfData_" + str(yearsOfData) + "_horizon_" + str(daysOfHorizon) + "_depth_" + str(daysOfDepth) + "_network_size_" + str(networkSize)
 util.plotSeries("Outputs/Outputs_" + str(datetime.now()) + details,
                 [actualSeries, predictedSeries], ["Actual Output", "Predicted Output"], "Facebook Own Posts Interaction Rate - "+profileName, "Interaction Rate")
