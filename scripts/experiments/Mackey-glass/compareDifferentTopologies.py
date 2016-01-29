@@ -16,42 +16,38 @@ from datetime import datetime
 errorFunction = rmse.RootMeanSquareError()
 
 #Read data from the file
-data = np.loadtxt('darwin.slp.txt')
+data = np.loadtxt('MackeyGlass_t17.txt')
 
 # Normalize the raw data
 minMax = pp.MinMaxScaler((0,1))
 data = minMax.fit_transform(data)
 
-#Input data and output data
-nTraining = 1150
-nTesting = 200
+# Training Input and Output data
+nTraining = 3000
+nTesting = 1000
 
 # Training input data
-inputTrainingData = np.hstack((np.ones((nTraining, 1)),data[:nTraining].reshape((nTraining, 1))))
-outputTrainingData = data[1:nTraining+1].reshape((nTraining, 1))
+input = np.hstack((np.ones((nTraining, 1)),data[:nTraining].reshape((nTraining, 1))))
+output = data[1:nTraining+1].reshape((nTraining, 1))
 
 
 # Partition the training data into training and validation
 trainingRatio = 0.6
-splitIndex = int(inputTrainingData.shape[0] * trainingRatio)
-trainingInputData = inputTrainingData[:splitIndex]
-validationInputData = inputTrainingData[splitIndex:]
-trainingOutputData = outputTrainingData[:splitIndex]
-validationOutputData = outputTrainingData[splitIndex:]
+splitIndex = int(input.shape[0] * trainingRatio)
+trainingInputData = input[:splitIndex]
+validationInputData = input[splitIndex:]
+trainingOutputData = output[:splitIndex]
+validationOutputData = output[splitIndex:]
 
-# trainingInputData = inputTrainingData
-# trainingOutputData = outputTrainingData
-# validationInputData = inputTrainingData
-# validationOutputData = outputTrainingData
 
 # Testing Input data
 testInputData = np.hstack((np.ones((nTesting, 1)),data[nTraining:nTraining+nTesting].reshape((nTesting, 1))))
 testActualOutputData = data[nTraining+1:nTraining+nTesting+1].reshape((nTesting, 1))
 
-size = 200
+size = 256
 initialTransient = 5
 runTimes = 10
-inputConnectivity = 0.6
+inputConnectivity = 1.0
 
 def runStandardESN():
     standardError = 0
@@ -68,7 +64,7 @@ def runStandardESN():
                                      validationOutputData=validationOutputData,
                                      inputConnectivity=inputConnectivity,
                                      reservoirConnectivityBound=reservoirConnectivityBound,
-                                     times=10)
+                                     times=5)
 
         reservoirConnectivityOptimum = resTuner.getOptimalParameters()
 
@@ -85,7 +81,7 @@ def runStandardESN():
         esn.trainReservoir()
 
         #Warm up for the trained data
-        predictedTrainingOutputData = esn.predict(inputTrainingData)
+        predictedTrainingOutputData = esn.predict(trainingInputData)
 
 
         #Predict for future
@@ -124,7 +120,7 @@ def runErdosESN():
                                     validationOutputData=validationOutputData,
                                     inputConnectivity=inputConnectivity,
                                     probabilityBound=probabilityBound,
-                                    times=10)
+                                    times=5)
         probabilityOptimum = esnTuner.getOptimalParameters()
 
         res = ESN.EchoStateNetwork(size=size,
@@ -135,7 +131,7 @@ def runErdosESN():
         res.trainReservoir()
 
         #Warm up using training data
-        trainingPredictedOutputData = res.predict(inputTrainingData)
+        trainingPredictedOutputData = res.predict(trainingInputData)
 
         #Predict for future
         lastAvailablePoint = testInputData[0,1]
@@ -177,7 +173,7 @@ def runSmallWorld():
                                                   inputConnectivity=inputConnectivity,
                                                   meanDegreeBound=meanDegreeBound,
                                                   betaBound=betaBound,
-                                                  times=10)
+                                                  times=5)
 
         meanDegreeOptimum, betaOptimum = esnTuner.getOptimalParameters()
 
@@ -189,7 +185,7 @@ def runSmallWorld():
         res.trainReservoir()
 
         #Warm up using training data
-        trainingPredictedOutputData = res.predict(inputTrainingData)
+        trainingPredictedOutputData = res.predict(trainingInputData)
 
         #Predict for future
         lastAvailablePoint = testInputData[0,1]
@@ -228,7 +224,8 @@ def runScaleFree():
                                                   validationInputData=validationInputData,
                                                   validationOutputData=validationOutputData,
                                                   inputConnectivity=inputConnectivity,
-                                                  attachmentBound=attachmentBound)
+                                                  attachmentBound=attachmentBound,
+                                                  times=5)
 
         attachmentOptimum = esnTuner.getOptimalParameters()
 
@@ -240,7 +237,7 @@ def runScaleFree():
         res.trainReservoir()
 
         #Warm up using training data
-        trainingPredictedOutputData = res.predict(inputTrainingData)
+        trainingPredictedOutputData = res.predict(trainingInputData)
 
         #Predict for future
         lastAvailablePoint = testInputData[0,1]
@@ -276,7 +273,7 @@ outputFolderName = "Outputs/Outputs" + datetime.now().strftime("%Y_%m_%d_%H_%M_%
 os.mkdir(outputFolderName)
 
 #Plotting of the prediction output and error
-outplot = outputPlot.OutputPlot(outputFolderName + "/Prediction.html", "Darwin Sea Level Pressure Prediction", "Comparison of Random Graph Topolgies - Standard Vs Erdos", "Time", "Sea Level Pressure")
+outplot = outputPlot.OutputPlot(outputFolderName + "/Prediction.html", "Mackey Glass Prediction", "Comparison of Random Graph Topolgies - Standard Vs Erdos", "Time", "Sea Level Pressure")
 outplot.setXSeries(np.arange(1, nTesting + 1))
 outplot.setYSeries('Actual Output', testActualOutputData)
 outplot.setYSeries('Predicted Output_standard_ESN_with_all_parameters_tuned', testPredictedOutputDataStandard)

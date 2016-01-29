@@ -2,23 +2,6 @@ import numpy as np
 import networkx as nx
 import matplotlib.pyplot as plt
 
-class ClassicReservoirTopology:
-    def __init__(self, size):
-        self.size = size
-
-    def generateWeightMatrix(self):
-        reservoirWeightRandom = np.random.rand(self.size, self.size)
-        return reservoirWeightRandom
-
-class ClassicInputTopology:
-    def __init__(self, inputSize, reservoirSize):
-        self.inputSize = inputSize
-        self.reservoirSize = reservoirSize
-
-    def generateWeightMatrix(self):
-        inputWeightRandom = np.random.rand(self.inputSize, self.reservoirSize)
-        return inputWeightRandom
-
 class RandomTopology:
     def __init__(self, size, connectivity):
         self.size = size
@@ -30,7 +13,9 @@ class RandomTopology:
         for i in range(self.size):
             indices = np.random.choice(self.size, size=int(self.connectivity * self.size), replace=False)
             connectivity[i, indices] = 1.0
-        return connectivity
+        randomIndices = connectivity == 1.0
+        return connectivity, randomIndices
+
 
 class ErdosRenyiTopology:
     def __init__(self, size, probability):
@@ -47,7 +32,8 @@ class ErdosRenyiTopology:
 
     def generateConnectivityMatrix(self):
         connectivity = np.asarray(nx.to_numpy_matrix(self.network))
-        return connectivity
+        randomIndices = connectivity == 1
+        return connectivity, randomIndices
 
 class SmallWorldGraphs:
     def __init__(self, size, meanDegree, beta):
@@ -58,7 +44,8 @@ class SmallWorldGraphs:
 
     def generateConnectivityMatrix(self):
         connectivity = np.asarray(nx.to_numpy_matrix(self.network))
-        return connectivity
+        randomIndices = connectivity == 1.0
+        return connectivity, randomIndices
 
 class ScaleFreeNetworks:
     def __init__(self, size, attachmentCount):
@@ -68,7 +55,8 @@ class ScaleFreeNetworks:
 
     def generateConnectivityMatrix(self):
         connectivity = np.asarray(nx.to_numpy_matrix(self.network))
-        return connectivity
+        randomIndices = connectivity == 1.0
+        return connectivity, randomIndices
 
 
 if __name__ == '__main__':
