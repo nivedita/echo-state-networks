@@ -57,7 +57,7 @@ class ReservoirTuner:
         regressionError = errorFunction.compute(self.validationOutputData, predictedOutputData)
 
         #Return the error
-        #print("\nThe Parameters: "+str(x)+" Regression error:"+str(regressionError))
+        print("\nThe Parameters: "+str(x)+" Regression error:"+str(regressionError))
         return regressionError
 
     def __tune__(self):

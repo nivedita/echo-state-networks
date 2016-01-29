@@ -20,11 +20,11 @@ data = np.loadtxt('MackeyGlass_t17.txt')
 minMax = pp.MinMaxScaler((-1,1))
 data = minMax.fit_transform(data)
 
-#Get only 4000 points
-data = data[:4000].reshape((4000, 1))
+#Get only 6000 points
+data = data[:5000].reshape((5000, 1))
 
-# Number of points - 4000
-trainingData, validationData = util.splitData2(data, 0.5)
+# Number of points - 5000
+trainingData, validationData = util.splitData2(data, 0.4)
 nTesting = validationData.shape[0]
 validationData = validationData.reshape((nTesting, 1))
 
@@ -38,10 +38,10 @@ initialTransient = 50
 res = ESN.Reservoir(size=size,
                                inputData=inputTrainingData,
                                outputData=outputTrainingData,
-                               spectralRadius=0.8212078,
-                               inputScaling=0.28820175,
-                               reservoirScaling=0.23426303,
-                               leakingRate=0.28772191,
+                               spectralRadius=0.79,
+                               inputScaling=0.5,
+                               reservoirScaling=0.5,
+                               leakingRate=0.3,
                                initialTransient=initialTransient)
 res.trainReservoir()
 
