@@ -3,6 +3,7 @@ import numpy as np
 import scipy.linalg as la
 import scipy.sparse.linalg as sla
 from reservoir import ReservoirTopology as topology
+from scipy.special import expit
 
 class EchoStateNetwork:
     def __init__(self, size, inputData, outputData, reservoirTopology, spectralRadius=0.80, inputScaling=0.5, reservoirScaling=0.5, leakingRate=0.3,
@@ -114,7 +115,7 @@ class EchoStateNetwork:
         for t in range(self.inputN):
             term1 = np.dot(self.inputWeight,self.inputData[t])
             term2 = np.dot(self.reservoirWeight,internalState)
-            internalState = (1.0-self.leakingRate)*internalState + self.leakingRate*np.tanh(term1 + term2)
+            internalState = (1.0-self.leakingRate)*internalState + self.leakingRate*expit(term1 + term2)
             if t >= self.initialTransient:
                 self.internalState[t-self.initialTransient] = internalState
 
@@ -140,7 +141,7 @@ class EchoStateNetwork:
             #reservoir activation
             term1 = np.dot(self.inputWeight,testInputData[t])
             term2 = np.dot(self.reservoirWeight,internalState)
-            internalState = (1-self.leakingRate)*internalState + self.leakingRate*np.tanh(term1 + term2)
+            internalState = (1-self.leakingRate)*internalState + self.leakingRate*expit(term1 + term2)
 
             #compute output
             output = np.dot(self.outputWeight, internalState)
