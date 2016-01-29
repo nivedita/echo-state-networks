@@ -4,7 +4,7 @@
 # 2. Give the data to the reservoir
 # 3. Plot the performance (such as error rate/accuracy)
 
-from reservoir import ClassicESN as ESN
+from reservoir import classicESN as ESN
 from plotting import OutputPlot as outputPlot
 import numpy as np
 import os

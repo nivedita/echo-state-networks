@@ -4,7 +4,6 @@
 # 2. Give the data to the reservoir
 # 3. Plot the performance (such as error rate/accuracy)
 
-from reservoir import ClassicESN as reservoir, EnhancedClassicTuner as tuner
 from plotting import OutputPlot as outputPlot
 import numpy as np
 from reservoir import Utility as util
@@ -50,7 +49,7 @@ predictedOutputData = minMax.inverse_transform(predictedOutputData)
 #Plotting of the prediction output and error
 outputFolderName = "Outputs/Outputs" + datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
 os.mkdir(outputFolderName)
-outplot = outputPlot.OutputPlot(outputFolderName + "/Prediction.html", "Mackey-Glass Time Series", "Prediction on Validation + Testing Set", "Time", "Output")
+outplot = outputPlot.OutputPlot(outputFolderName + "/Prediction.html", "Mackey-Glass Time Series - Differential Evolution Optimization", "Prediction on Validation + Testing Set", "Time", "Output")
 outplot.setXSeries(np.arange(1, nValidation + nTesting + 1))
 outplot.setYSeries('Actual Output', actualOutputData)
 outplot.setYSeries('Predicted Output', predictedOutputData)

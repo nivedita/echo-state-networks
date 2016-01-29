@@ -1,5 +1,5 @@
 import numpy as np
-from reservoir import EnhancedClassicTuner as tuner, ReservoirTopology as topology, ClassicESN as ESN, Utility as util
+from reservoir import EnhancedClassicTuner as tuner, ReservoirTopology as topology, classicESN as ESN, Utility as util
 
 def splitData(data, trainingRatio, validationRatio, testingRatio):
     N = data.shape[0]
@@ -80,7 +80,7 @@ def tuneTrainPredict(trainingInputData, trainingOutputData, validationOutputData
                                 leakingRateBound=leakingRateBound,
                                 inputWeightMatrix=inputWeightMatrix,
                                 reservoirWeightMatrix=reservoirWeightMatrix,
-                                minimizer=tuner.Minimizer.DifferentialEvolution)
+                                minimizer=tuner.Minimizer.BasinHopping)
     spectralRadiusOptimum, inputScalingOptimum, reservoirScalingOptimum, leakingRateOptimum = resTuner.getOptimalParameters()
 
     #Train

@@ -1,5 +1,5 @@
 from scipy import optimize
-from reservoir import ClassicESN
+from reservoir import classicESN
 from performance import RootMeanSquareError as rmse
 import numpy as np
 from reservoir import Utility as util
@@ -10,11 +10,10 @@ class Minimizer(Enum):
     DifferentialEvolution = 2
 
 class ParameterStep(object):
-    def __init__(self, stepsize=0.01):
+    def __init__(self, stepsize=0.001):
         self.stepsize = stepsize
     def __call__(self, x):
-        s = self.stepsize
-        x += 0.01
+        x += self.stepsize
         return x
 
 class ReservoirTuner:
@@ -58,7 +57,7 @@ class ReservoirTuner:
         leakingRate = x[3]
 
         #Create the reservoir
-        res = ClassicESN.Reservoir(size=self.size,
+        res = classicESN.Reservoir(size=self.size,
                                   spectralRadius=spectralRadius,
                                   inputScaling=inputScaling,
                                   reservoirScaling=reservoirScaling,
@@ -71,6 +70,12 @@ class ReservoirTuner:
 
         #Train the reservoir
         res.trainReservoir()
+
+        #Warm up
+        # predictedTrainingOutputData = res.predict(self.trainingInputData)
+
+        # TODO
+        predictedTrainingOutputData = res.predict(self.trainingInputData[-self.initialTransient:])
 
         #Predict for the validation data
         predictedOutputData = util.predictFuture(res, self.initialSeed, self.horizon)
@@ -87,12 +92,14 @@ class ReservoirTuner:
         if self.minimizer == Minimizer.DifferentialEvolution:
             bounds = [self.spectralRadiusBound, self.inputScalingBound, self.reservoirScalingBound, self.leakingRateBound]
             result = optimize.differential_evolution(self.__reservoirTrain__,bounds=bounds)
+            print("The Optimization results are :"+str(result))
             return result.x[0], result.x[1], result.x[2], result.x[3]
         else:
             bounds = [self.spectralRadiusBound, self.inputScalingBound, self.reservoirScalingBound, self.leakingRateBound]
-            minimizer_kwargs = {"method": "TNC", "bounds":bounds, "options": {"eps":0.05}}
+            minimizer_kwargs = {"method": "TNC", "bounds":bounds, "options": {"eps":0.001}}
             mytakestep = ParameterStep()
-            result = optimize.basinhopping(self.__reservoirTrain__, x0=self.initialGuess, minimizer_kwargs=minimizer_kwargs, take_step=mytakestep, stepsize=0.01)
+            result = optimize.basinhopping(self.__reservoirTrain__, x0=self.initialGuess, minimizer_kwargs=minimizer_kwargs, take_step=mytakestep, stepsize=0.001)
+            print("The Optimization results are :"+str(result))
             return result.x[0], result.x[1], result.x[2], result.x[3]
 
     def getOptimalParameters(self):
