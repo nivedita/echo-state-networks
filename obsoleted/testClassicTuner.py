@@ -4,9 +4,9 @@
 # 2. Give the data to the reservoir
 # 3. Plot the performance (such as error rate/accuracy)
 
-from reservoir import ClassicESN as reservoir, ClassicTuner as tuner
+from reservoir import classicESN as reservoir, ClassicTuner as tuner
 from plotting import OutputPlot as outputPlot
-from performance import RootMeanSquareError as rmse
+from performance import ErrorMetrics as rmse
 from sklearn import preprocessing as pp
 import numpy as np
 from reservoir import Utility as util

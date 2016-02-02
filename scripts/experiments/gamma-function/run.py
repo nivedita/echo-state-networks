@@ -7,7 +7,7 @@ from theano.tensor.tests.test_elemwise import test_IsInf_IsNan
 
 from reservoir import EchoStateNetwork as reservoir
 from plotting import OutputPlot as outputPlot, ErrorPlot as errorPlot
-from performance import RootMeanSquareError as rmse
+from performance import ErrorMetrics as rmse
 from datetime import datetime
 import numpy as np
 import os

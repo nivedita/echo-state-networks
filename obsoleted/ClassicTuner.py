@@ -1,6 +1,6 @@
 from scipy import optimize
-from reservoir import ClassicESN
-from performance import RootMeanSquareError as rmse
+from reservoir import classicESN
+from performance import ErrorMetrics as rmse
 import numpy as np
 
 class ReservoirTuner:
@@ -31,16 +31,16 @@ class ReservoirTuner:
         leakingRate = x[3]
 
         #Create the reservoir
-        res = ClassicESN.Reservoir(size=self.size,
-                                  spectralRadius=spectralRadius,
-                                  inputScaling=inputScaling,
-                                  reservoirScaling=reservoirScaling,
-                                  leakingRate=leakingRate,
-                                  initialTransient=self.initialTransient,
-                                  inputData=self.trainingInputData,
-                                  outputData=self.trainingOutputData,
-                                  inputWeightRandom=self.inputWeightRandom,
-                                  reservoirWeightRandom=self.reservoirWeightRandom)
+        res = classicESN.Reservoir(size=self.size,
+                                   spectralRadius=spectralRadius,
+                                   inputScaling=inputScaling,
+                                   reservoirScaling=reservoirScaling,
+                                   leakingRate=leakingRate,
+                                   initialTransient=self.initialTransient,
+                                   inputData=self.trainingInputData,
+                                   outputData=self.trainingOutputData,
+                                   inputWeightRandom=self.inputWeightRandom,
+                                   reservoirWeightRandom=self.reservoirWeightRandom)
 
         #Train the reservoir
         res.trainReservoir()

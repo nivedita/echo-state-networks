@@ -11,7 +11,7 @@ import numpy as np
 import os
 from timeseries import TimeSeries as ts
 from sklearn import preprocessing as pp
-from performance import RootMeanSquareError as rmse
+from performance import ErrorMetrics as rmse
 
 # Depth and Horizon
 horizon = 90

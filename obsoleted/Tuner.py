@@ -1,6 +1,6 @@
 from scipy import optimize
 from reservoir import EchoStateNetwork, ReservoirTopology as topology
-from performance import RootMeanSquareError as rmse
+from performance import ErrorMetrics as rmse
 import numpy as np
 import gc
 from enum import Enum

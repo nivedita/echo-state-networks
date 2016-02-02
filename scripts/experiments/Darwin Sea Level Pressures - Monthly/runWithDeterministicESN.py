@@ -7,7 +7,7 @@
 
 from reservoir import DetermimisticReservoir as dr, DeterministicTuner as tuner, EchoStateNetwork as reservoir
 from plotting import OutputPlot as outputPlot, ErrorPlot as errorPlot
-from performance import RootMeanSquareError as rmse
+from performance import ErrorMetrics as rmse
 import numpy as np
 from sklearn import preprocessing as pp
 from performance import DataWhittener as dw

@@ -1,5 +1,12 @@
 import numpy as np
 from reservoir import EnhancedClassicTuner as tuner, ReservoirTopology as topology, classicESN as ESN, Utility as util
+from enum import Enum
+
+class Topology(Enum):
+    Random = 1
+    ErdosRenyi = 2
+    SmallWorldGraphs = 3
+    ScaleFreeNetworks = 4
 
 def splitData(data, trainingRatio, validationRatio, testingRatio):
     N = data.shape[0]
@@ -68,19 +75,19 @@ def tuneTrainPredict(trainingInputData, trainingOutputData, validationOutputData
     else: #TODO - think about matrix multiplication
         reservoirWeightMatrix = reservoirTopology.generateConnectivityMatrix()
 
-    resTuner = tuner.ReservoirTuner(size=size,
-                                initialTransient=initialTransient,
-                                trainingInputData=trainingInputData,
-                                trainingOutputData=trainingOutputData,
-                                initialSeed=initialInputSeedForValidation,
-                                validationOutputData=validationOutputData,
-                                spectralRadiusBound=spectralRadiusBound,
-                                inputScalingBound=inputScalingBound,
-                                reservoirScalingBound=reservoirScalingBound,
-                                leakingRateBound=leakingRateBound,
-                                inputWeightMatrix=inputWeightMatrix,
-                                reservoirWeightMatrix=reservoirWeightMatrix,
-                                minimizer=tuner.Minimizer.BasinHopping)
+    resTuner = tuner.ReservoirParameterTuner(size=size,
+                                             initialTransient=initialTransient,
+                                             trainingInputData=trainingInputData,
+                                             trainingOutputData=trainingOutputData,
+                                             initialSeed=initialInputSeedForValidation,
+                                             validationOutputData=validationOutputData,
+                                             spectralRadiusBound=spectralRadiusBound,
+                                             inputScalingBound=inputScalingBound,
+                                             reservoirScalingBound=reservoirScalingBound,
+                                             leakingRateBound=leakingRateBound,
+                                             inputWeightMatrix=inputWeightMatrix,
+                                             reservoirWeightMatrix=reservoirWeightMatrix,
+                                             minimizer=tuner.Minimizer.BasinHopping)
     spectralRadiusOptimum, inputScalingOptimum, reservoirScalingOptimum, leakingRateOptimum = resTuner.getOptimalParameters()
 
     #Train
@@ -94,6 +101,90 @@ def tuneTrainPredict(trainingInputData, trainingOutputData, validationOutputData
                               outputData=trainingOutputData,
                               inputWeightRandom=inputWeightMatrix,
                               reservoirWeightRandom=reservoirWeightMatrix)
+    network.trainReservoir()
+
+    #Warm up
+    predictedTrainingOutputData = network.predict(trainingInputData)
+
+    # Predict until horizon
+    # TODO - throw away the validation output and return the test output only
+    horizon = horizon + validationOutputData.shape[0]
+    predictedOutputData = predictFuture(network, initialInputSeedForValidation, horizon)[:,0]
+    return predictedOutputData
+
+def tuneTrainPredictConnectivity(trainingInputData, trainingOutputData, validationOutputData,
+                                            initialInputSeedForValidation, horizon, size=256,initialTransient=50,
+                                            resTopology = Topology.Random):
+
+    # Other reservoir parameters
+    spectralRadius = 0.79
+    inputScaling = 0.5
+    reservoirScaling = 0.5
+    leakingRate = 0.3
+
+    if(resTopology == Topology.Random):
+        resTuner = tuner.RandomConnectivityBruteTuner(size=size,
+                                                 initialTransient=initialTransient,
+                                                 trainingInputData=trainingInputData,
+                                                 trainingOutputData=trainingOutputData,
+                                                 initialSeed=initialInputSeedForValidation,
+                                                 validationOutputData=validationOutputData,
+                                                 spectralRadius=spectralRadius, inputScaling=inputScaling,
+                                                 reservoirScaling=reservoirScaling, leakingRate=leakingRate)
+        reservoirConnectivityOptimum, averageError = resTuner.getOptimalParameters()
+
+        inputWeightMatrix = topology.ClassicInputTopology(inputSize=trainingInputData.shape[1], reservoirSize=size).generateWeightMatrix()
+        reservoirWeightMatrix = topology.RandomReservoirTopology(size=size, connectivity=reservoirConnectivityOptimum).generateWeightMatrix()
+    elif(resTopology == Topology.ErdosRenyi):
+        resTuner = tuner.ErdosRenyiConnectivityBruteTuner(size=size,
+                                                 initialTransient=initialTransient,
+                                                 trainingInputData=trainingInputData,
+                                                 trainingOutputData=trainingOutputData,
+                                                 initialSeed=initialInputSeedForValidation,
+                                                 validationOutputData=validationOutputData,
+                                                 spectralRadius=spectralRadius, inputScaling=inputScaling,
+                                                 reservoirScaling=reservoirScaling, leakingRate=leakingRate)
+        probabilityOptimum, averageError = resTuner.getOptimalParameters()
+        inputWeightMatrix = topology.ClassicInputTopology(inputSize=trainingInputData.shape[1], reservoirSize=size).generateWeightMatrix()
+        reservoirWeightMatrix = topology.ErdosRenyiTopology(size=size, probability=probabilityOptimum).generateWeightMatrix()
+    elif(resTopology == Topology.ScaleFreeNetworks):
+        resTuner = tuner.ScaleFreeNetworksConnectivityBruteTuner(size=size,
+                                                 initialTransient=initialTransient,
+                                                 trainingInputData=trainingInputData,
+                                                 trainingOutputData=trainingOutputData,
+                                                 initialSeed=initialInputSeedForValidation,
+                                                 validationOutputData=validationOutputData,
+                                                 spectralRadius=spectralRadius, inputScaling=inputScaling,
+                                                 reservoirScaling=reservoirScaling, leakingRate=leakingRate)
+        attachmentOptimum, averageError = resTuner.getOptimalParameters()
+        inputWeightMatrix = topology.ClassicInputTopology(inputSize=trainingInputData.shape[1], reservoirSize=size).generateWeightMatrix()
+        reservoirWeightMatrix = topology.ScaleFreeNetworks(size=size, attachmentCount=attachmentOptimum).generateWeightMatrix()
+    elif(resTopology == Topology.SmallWorldGraphs):
+        resTuner = tuner.SmallWorldGraphsConnectivityBruteTuner(size=size,
+                                                 initialTransient=initialTransient,
+                                                 trainingInputData=trainingInputData,
+                                                 trainingOutputData=trainingOutputData,
+                                                 initialSeed=initialInputSeedForValidation,
+                                                 validationOutputData=validationOutputData,
+                                                 spectralRadius=spectralRadius, inputScaling=inputScaling,
+                                                 reservoirScaling=reservoirScaling, leakingRate=leakingRate)
+        meanDegreeOptimum, betaOptimum, averageError = resTuner.getOptimalParameters()
+        inputWeightMatrix = topology.ClassicInputTopology(inputSize=trainingInputData.shape[1], reservoirSize=size).generateWeightMatrix()
+        reservoirWeightMatrix = topology.SmallWorldGraphs(size=size, meanDegree=int(meanDegreeOptimum), beta=betaOptimum).generateWeightMatrix()
+
+    # TODO: train 10 times and get the mean prediction and mean error
+
+    #Train
+    network = ESN.Reservoir(size=size,
+                            spectralRadius=spectralRadius,
+                            inputScaling=inputScaling,
+                            reservoirScaling=reservoirScaling,
+                            leakingRate=leakingRate,
+                            initialTransient=initialTransient,
+                            inputData=trainingInputData,
+                            outputData=trainingOutputData,
+                            inputWeightRandom=inputWeightMatrix,
+                            reservoirWeightRandom=reservoirWeightMatrix)
     network.trainReservoir()
 
     #Warm up

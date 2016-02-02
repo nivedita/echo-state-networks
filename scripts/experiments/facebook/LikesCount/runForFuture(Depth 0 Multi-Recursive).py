@@ -6,7 +6,7 @@
 
 from reservoir import EchoStateNetwork as reservoir
 from plotting import OutputPlot as outputPlot, ErrorPlot as errorPlot, OutputTimeSeries as outTimePlot
-from performance import RootMeanSquareError as rmse
+from performance import ErrorMetrics as rmse
 from datetime import datetime
 import numpy as np
 import os

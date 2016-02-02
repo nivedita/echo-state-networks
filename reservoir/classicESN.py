@@ -53,14 +53,17 @@ class Reservoir:
         #ie. the values are chosen from [-inputScaling, +inputScaling]
         #TODO: Normalize ?
         self.inputWeight = self.inputWeightRandom
-        self.inputWeight = self.inputWeight - self.inputScaling
+
+        # Apply scaling only non-zero elements (Because of various toplogies)
+        self.inputWeight[self.inputWeight!=0.0] = self.inputWeight[self.inputWeight!=0.0] - self.inputScaling
 
     def __generateReservoirWeight(self):
         #Choose a uniform distribution
         #TODO: Normalize ?
         self.reservoirWeight = self.reservoirWeightRandom
 
-        self.reservoirWeight = self.reservoirWeight - self.reservoirScaling
+        # Apply scaling only non-zero elements (Because of various toplogies)
+        self.reservoirWeight[self.reservoirWeight!=0.0] = self.reservoirWeight[self.reservoirWeight!=0.0] - self.reservoirScaling
 
         #Make the reservoir weight matrix - a unit spectral radius
         rad = np.max(np.abs(la.eigvals(self.reservoirWeight)))
@@ -69,6 +72,7 @@ class Reservoir:
         #Force spectral radius
         self.reservoirWeight = self.reservoirWeight * self.spectralRadius
 
+    # TODO: This is a candidate for gnumpy conversion
     def trainReservoir(self):
 
         internalState = np.zeros(self.Nx)
@@ -90,6 +94,7 @@ class Reservoir:
             B = self.outputData[self.initialTransient:, d]
             self.outputWeight[d, :] = sla.lsmr(A, B, damp=1e-8)[0]
 
+    # TODO: This is a candidate for gnumpy conversion
     def predict(self, testInputData):
 
         testInputN, testInputD = testInputData.shape
@@ -113,7 +118,8 @@ class Reservoir:
         self.latestInternalState = internalState
 
         return testOutputData
-
+    
+    # TODO: This is a candidate for gnumpy conversion
     def predictOnePoint(self, testInput):
         term1 = np.dot(self.inputWeight,testInput[0])
         term2 = np.dot(self.reservoirWeight,self.latestInternalState)

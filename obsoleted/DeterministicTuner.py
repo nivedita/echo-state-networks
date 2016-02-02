@@ -1,6 +1,6 @@
 from scipy import optimize
 from reservoir import EchoStateNetwork, DetermimisticReservoir as dr
-from performance import RootMeanSquareError as rmse
+from performance import ErrorMetrics as rmse
 
 class DeterministicReservoirTuner:
     def __init__(self, size, initialTransient, trainingInputData, trainingOutputData, validationInputData, validationOutputData, inputWeight_v, reservoirTopology, inputScalingBound, leakingRateBound):
