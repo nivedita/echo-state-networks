@@ -40,7 +40,7 @@ topologyObjects = [topology.ErdosRenyiTopology(size=size, probability=0.1),topol
 ]
 topologyTestOutput = []
 topologyError = []
-errorFunction = rmse.RootMeanSquareError()
+errorFunction = rmse.MeanSquareError()
 
 for i in range(len(topologyObjects)):
 

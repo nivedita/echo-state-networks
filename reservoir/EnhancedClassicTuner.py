@@ -209,7 +209,7 @@ class RandomConnectivityBruteTuner:
         self.initialSeed = initialSeed
         self.validationOutputData = validationOutputData
         self.horizon = self.validationOutputData.shape[0]
-        self.ranges = slice(0.1,1.0,0.005)
+        self.ranges = slice(0.1,1.0,0.01)
 
         # Input-to-reservoir is of Classic Type - Fully connected and maintained as constant
         self.inputN, self.inputD = self.trainingInputData.shape
@@ -232,7 +232,7 @@ class RandomConnectivityBruteTuner:
         reservoirConnectivity = float(x)
 
         # To get rid off the randomness in assigning weights, run it 10 times and  take the average error
-        times = 1
+        times = 10
         cumulativeError = 0
 
         for i in range(times):
@@ -264,7 +264,7 @@ class RandomConnectivityBruteTuner:
             gc.collect()
 
             #Calcuate the regression error
-            errorFunction = metrics.RootMeanSquareError()
+            errorFunction = metrics.MeanSquareError()
             error = errorFunction.compute(self.validationOutputData, predictedOutputData)
             cumulativeError += error
 
@@ -276,7 +276,7 @@ class RandomConnectivityBruteTuner:
 
     def __tune__(self):
         result = optimize.brute(self.__reservoirTrain__,ranges=(self.ranges,), finish=None, full_output=True)
-        print("The Optimization results are :"+str(result))
+        #print("The Optimization results are :"+str(result))
         return result[0]
     def getOptimalParameters(self):
         return self.__tune__()
@@ -294,7 +294,7 @@ class ErdosRenyiConnectivityBruteTuner:
         self.horizon = self.validationOutputData.shape[0]
 
         # Probability ranges
-        self.ranges = slice(0.1,1.0,0.005)
+        self.ranges = slice(0.1,1.0,0.01)
 
         # Input-to-reservoir is of Classic Type - Fully connected and maintained as constant
         self.inputN, self.inputD = self.trainingInputData.shape
@@ -353,7 +353,7 @@ class ErdosRenyiConnectivityBruteTuner:
             gc.collect()
 
             #Calcuate the regression error
-            errorFunction = metrics.RootMeanSquareError()
+            errorFunction = metrics.MeanSquareError()
             error = errorFunction.compute(self.validationOutputData, predictedOutputData)
             cumulativeError += error
 
@@ -365,7 +365,7 @@ class ErdosRenyiConnectivityBruteTuner:
 
     def __tune__(self):
         result = optimize.brute(self.__reservoirTrain__,ranges=(self.ranges,), finish=None, full_output=True)
-        print("The Optimization results are :"+str(result))
+        #print("The Optimization results are :"+str(result))
         return result[0]
     def getOptimalParameters(self):
         return self.__tune__()
@@ -410,7 +410,7 @@ class ScaleFreeNetworksConnectivityBruteTuner:
         attachment = int(x)
 
         # To get rid off the randomness in assigning weights, run it 10 times and  take the average error
-        times = 1
+        times = 10
         cumulativeError = 0
 
         for i in range(times):
@@ -442,7 +442,7 @@ class ScaleFreeNetworksConnectivityBruteTuner:
             gc.collect()
 
             #Calcuate the regression error
-            errorFunction = metrics.RootMeanSquareError()
+            errorFunction = metrics.MeanSquareError()
             error = errorFunction.compute(self.validationOutputData, predictedOutputData)
             cumulativeError += error
 
@@ -454,7 +454,7 @@ class ScaleFreeNetworksConnectivityBruteTuner:
 
     def __tune__(self):
         result = optimize.brute(self.__reservoirTrain__,ranges=(self.ranges,), finish=None, full_output=True)
-        print("The Optimization results are :"+str(result))
+        #print("The Optimization results are :"+str(result))
         return int(result[0])
     def getOptimalParameters(self):
         return self.__tune__()
@@ -472,7 +472,7 @@ class SmallWorldGraphsConnectivityBruteTuner:
         self.horizon = self.validationOutputData.shape[0]
 
         # Ranges for mean degree k and beta
-        self.ranges = (slice(2,self.size - 1,2), slice(0.1,1.0,0.01))
+        self.ranges = (slice(2,self.size - 1,10), slice(0.1,1.0,0.10))
 
         # Input-to-reservoir is of Classic Type - Fully connected and maintained as constant
         self.inputN, self.inputD = self.trainingInputData.shape
@@ -532,7 +532,7 @@ class SmallWorldGraphsConnectivityBruteTuner:
             gc.collect()
 
             #Calcuate the regression error
-            errorFunction = metrics.RootMeanSquareError()
+            errorFunction = metrics.MeanSquareError()
             error = errorFunction.compute(self.validationOutputData, predictedOutputData)
             cumulativeError += error
 
@@ -544,7 +544,7 @@ class SmallWorldGraphsConnectivityBruteTuner:
 
     def __tune__(self):
         result = optimize.brute(self.__reservoirTrain__,ranges=self.ranges, finish=None, full_output=True)
-        print("The Optimization results are :"+str(result))
+        #print("The Optimization results are :"+str(result))
         return result[0]
     def getOptimalParameters(self):
         return self.__tune__()

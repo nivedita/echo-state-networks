@@ -129,7 +129,7 @@ for depth in depthList:
     predictedDict[str(depth)] = deScaled
 
     #Calculate the error
-    errorFunction = rmse.RootMeanSquareError()
+    errorFunction = rmse.MeanSquareError()
     error = errorFunction.compute(actualData.reshape(1, horizon), deScaled.reshape(1,horizon))
     regressionError.append(error)
 

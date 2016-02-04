@@ -53,7 +53,7 @@ class ReservoirTuner:
         predictedOutputData = util.predictFuture(res, self.initialSeed, self.horizon)
 
         #Calcuate the regression error
-        errorFunction = rmse.RootMeanSquareError()
+        errorFunction = rmse.MeanSquareError()
         regressionError = errorFunction.compute(self.validationOutputData, predictedOutputData)
 
         #Return the error

@@ -36,7 +36,7 @@ topologyNames = ['DLR', 'DLRB', 'SCR']
 topologyObjects = [dr.ReservoirTopologyDLR(0.7), dr.ReservoirTopologyDLRB(0.7, 0.3), dr.ReservoirTopologySCR(0.3)]
 topologyTestOutput = []
 topologyError = []
-errorFunction = rmse.RootMeanSquareError()
+errorFunction = rmse.MeanSquareError()
 
 for i in range(len(topologyObjects)):
 

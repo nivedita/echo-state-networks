@@ -31,7 +31,7 @@ nTesting = testingData.shape[0]
 
 # Form feature vectors for training data
 trainingInputData, trainingOutputData = util.formFeatureVectors(trainingData)
-actualOutputData = minMax.inverse_transform(np.vstack((validationData[:nValidation],testingData[:nTesting])))[:,0]
+actualOutputData = minMax.inverse_transform(testingData)[:,0]
 
 # Initial seed
 initialSeedForValidation = trainingData[-1]

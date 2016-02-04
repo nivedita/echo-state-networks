@@ -13,7 +13,7 @@ from sklearn import preprocessing as pp
 import os
 from datetime import datetime
 
-errorFunction = rmse.RootMeanSquareError()
+errorFunction = rmse.MeanSquareError()
 
 #Read data from the file
 data = np.loadtxt('darwin.slp.txt')

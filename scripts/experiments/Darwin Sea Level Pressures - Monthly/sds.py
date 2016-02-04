@@ -34,7 +34,7 @@ size = 100
 initialTransient = 5
 inputConnectivityBound = (0.1,0.9) # Usually dense
 probabilityBound = (0.0,0.9) #To avoid isolated bounds, keep the upper bound low
-errorFunction = rmse.RootMeanSquareError()
+errorFunction = rmse.MeanSquareError()
 esnTuner = tuner.ESNErdosTuner(size=size,
                             initialTransient=initialTransient,
                             trainingInputData=inputTrainingData,

@@ -1,11 +1,11 @@
 import pandas as pd
 import numpy as np
 from timeseries import TimeSeriesContinuousProcessor as processor, TimeSeriesInterval as tsi
-from reservoir import EchoStateNetwork as esn, ReservoirTopology as topology
+from reservoir import classicESN as esn, ReservoirTopology as topology
 from sklearn import preprocessing as pp
 import os
 from plotting import OutputTimeSeries as plotting
-from reservoir import Tuner as tuner
+# from reservoir import Tuner as tuner
 
 class SeriesUtility:
     def __init__(self):
@@ -127,101 +127,118 @@ class SeriesUtility:
 
         return featureVectors, targetVectors
 
+    def formContinousFeatureAndTargetVectorsWithoutBias(self, series, depth):
+        # Pre-process the data and form feature and target vectors
+        tsp = processor.TimeSeriesContinuosProcessor(series, depth, horizon=1)
+        featureVectors, targetVectors = tsp.getProcessedData()
+
+        return featureVectors, targetVectors
+
+
     def trainESNWithoutTuning(self, size, featureVectors, targetVectors, initialTransient,
                               inputConnectivity=0.8, reservoirConnectivity=0.4, inputScaling=0.5,
                               reservoirScaling=0.5, spectralRadius=0.79, leakingRate=0.3):
 
-        network = esn.EchoStateNetwork(size=size,
-                                       inputData=featureVectors,
-                                       outputData=targetVectors,
-                                       reservoirTopology=topology.RandomTopology(size=size,
-                                                                                 connectivity=reservoirConnectivity),
-                                       spectralRadius=spectralRadius,
-                                       inputConnectivity=inputConnectivity,
-                                       inputScaling=inputScaling,
-                                       reservoirScaling=reservoirScaling,
-                                       leakingRate=leakingRate)
+
+        inputWeightMatrix = topology.ClassicInputTopology(inputSize=featureVectors.shape[1], reservoirSize=size).generateWeightMatrix()
+        reservoirWeightMatrix = topology.RandomReservoirTopology(size=size, connectivity=reservoirConnectivity).generateWeightMatrix()
+        #reservoirWeightMatrix = topology.ScaleFreeNetworks(size=size, attachmentCount=int(size/2)).generateWeightMatrix()
+        #reservoirWeightMatrix = topology.SmallWorldGraphs(size=size, meanDegree=int(size/2), beta=0.5).generateWeightMatrix()
+
+
+        network = esn.Reservoir(size=size,
+                                spectralRadius=spectralRadius,
+                                inputScaling=inputScaling,
+                                reservoirScaling=reservoirScaling,
+                                leakingRate=leakingRate,
+                                initialTransient=initialTransient,
+                                inputData=featureVectors,
+                                outputData=targetVectors,
+                                inputWeightRandom=inputWeightMatrix,
+                                reservoirWeightRandom=reservoirWeightMatrix,
+                                activationFunction=esn.ActivationFunction.EXPIT)
+
         network.trainReservoir()
 
         # Warm-up the network
-        trainingPredictedOutputData = network.predict(featureVectors)
+        trainingPredictedOutputData = network.predict(featureVectors[-initialTransient:])
 
         # Store it and it will be used in the predictFuture method
         self.esn = network
 
-    def trainESNWithFullTuning(self, size, featureVectors, targetVectors, initialTransient):
-
-        inputConnectivityBound = (0.1, 1.0)
-        reservoirConnectivityBound = (0.1, 1.0)
-        inputScalingBound = (0.0, 1.0)
-        reservoirScalingBound = (0.0, 1.0)
-        spectralRadiusBound = (0.0, 1.0)
-        leakingRateBound = (0.0, 1.0)
-
-        esnTuner = tuner.ESNTunerWithConnectivity(size=size,
-                                                  initialTransient=initialTransient,
-                                                  trainingInputData=featureVectors,
-                                                  trainingOutputData=targetVectors,
-                                                  validationInputData=featureVectors,
-                                                  validationOutputData=targetVectors,
-                                                  spectralRadiusBound=spectralRadiusBound,
-                                                  inputScalingBound=inputScalingBound,
-                                                  reservoirScalingBound=reservoirScalingBound,
-                                                  leakingRateBound=leakingRateBound,
-                                                  inputConnectivityBound=inputConnectivityBound,
-                                                  reservoirConnectivityBound=reservoirConnectivityBound)
-        spectralRadiusOptimum, inputScalingOptimum, reservoirScalingOptimum, leakingRateOptimum, inputWeightConn, reservoirWeightConn = esnTuner.getOptimalParameters()
-
-        network = esn.EchoStateNetwork(size=size,
-                                       inputData=featureVectors,
-                                       outputData=targetVectors,
-                                       reservoirTopology=topology.RandomTopology(size=size, connectivity=0.3),
-                                       spectralRadius=spectralRadiusOptimum,
-                                       inputScaling=inputScalingOptimum,
-                                       reservoirScaling=reservoirScalingOptimum,
-                                       leakingRate=leakingRateOptimum,
-                                       initialTransient=initialTransient,
-                                       inputWeightConn=inputWeightConn,
-                                       reservoirWeightConn=reservoirWeightConn)
-        network.trainReservoir()
-
-        # Warm-up the network
-        trainingPredictedOutputData = network.predict(featureVectors)
-
-        # Store it and it will be used in the predictFuture method
-        self.esn = network
-
-    def trainESNWithMinimalTuning(self, size, featureTrainingVectors, targetTrainingVectors,
-                                  featureValidationVectors, targetValidationVectors, initialTransient):
-
-        inputConnectivityBound = (0.1,0.9)
-        probabilityBound = (0.1,0.9)
-
-        esnTuner = tuner.ESNErdosTuner(size=300,
-                                  initialTransient=initialTransient,
-                                  trainingInputData=featureTrainingVectors,
-                                  trainingOutputData=targetTrainingVectors,
-                                  validationInputData=featureValidationVectors,
-                                  validationOutputData=targetValidationVectors,
-                                  inputConnectivityBound=inputConnectivityBound,
-                                  probabilityBound=probabilityBound,
-                                  times=3)
-        inputConnectivityOptimum, probabilityOptimum = esnTuner.getOptimalParameters()
-
-        network = esn.EchoStateNetwork(size=size,
-                                       inputData=featureTrainingVectors,
-                                       outputData=targetTrainingVectors,
-                                       reservoirTopology=topology.ErdosRenyiTopology(size=size,
-                                                                                     probability=probabilityOptimum),
-                                       initialTransient=initialTransient,
-                                       inputConnectivity=inputConnectivityOptimum)
-        network.trainReservoir()
-
-        # # Warm-up the network
-        # trainingPredictedOutputData = network.predict(featureValidationVectors)
-
-        # Store it and it will be used in the predictFuture method
-        self.esn = network
+    # def trainESNWithFullTuning(self, size, featureVectors, targetVectors, initialTransient):
+    #
+    #     inputConnectivityBound = (0.1, 1.0)
+    #     reservoirConnectivityBound = (0.1, 1.0)
+    #     inputScalingBound = (0.0, 1.0)
+    #     reservoirScalingBound = (0.0, 1.0)
+    #     spectralRadiusBound = (0.0, 1.0)
+    #     leakingRateBound = (0.0, 1.0)
+    #
+    #     esnTuner = tuner.ESNTunerWithConnectivity(size=size,
+    #                                               initialTransient=initialTransient,
+    #                                               trainingInputData=featureVectors,
+    #                                               trainingOutputData=targetVectors,
+    #                                               validationInputData=featureVectors,
+    #                                               validationOutputData=targetVectors,
+    #                                               spectralRadiusBound=spectralRadiusBound,
+    #                                               inputScalingBound=inputScalingBound,
+    #                                               reservoirScalingBound=reservoirScalingBound,
+    #                                               leakingRateBound=leakingRateBound,
+    #                                               inputConnectivityBound=inputConnectivityBound,
+    #                                               reservoirConnectivityBound=reservoirConnectivityBound)
+    #     spectralRadiusOptimum, inputScalingOptimum, reservoirScalingOptimum, leakingRateOptimum, inputWeightConn, reservoirWeightConn = esnTuner.getOptimalParameters()
+    #
+    #     network = esn.EchoStateNetwork(size=size,
+    #                                    inputData=featureVectors,
+    #                                    outputData=targetVectors,
+    #                                    reservoirTopology=topology.RandomTopology(size=size, connectivity=0.3),
+    #                                    spectralRadius=spectralRadiusOptimum,
+    #                                    inputScaling=inputScalingOptimum,
+    #                                    reservoirScaling=reservoirScalingOptimum,
+    #                                    leakingRate=leakingRateOptimum,
+    #                                    initialTransient=initialTransient,
+    #                                    inputWeightConn=inputWeightConn,
+    #                                    reservoirWeightConn=reservoirWeightConn)
+    #     network.trainReservoir()
+    #
+    #     # Warm-up the network
+    #     trainingPredictedOutputData = network.predict(featureVectors)
+    #
+    #     # Store it and it will be used in the predictFuture method
+    #     self.esn = network
+    #
+    # def trainESNWithMinimalTuning(self, size, featureTrainingVectors, targetTrainingVectors,
+    #                               featureValidationVectors, targetValidationVectors, initialTransient):
+    #
+    #     inputConnectivityBound = (0.1,0.9)
+    #     probabilityBound = (0.1,0.9)
+    #
+    #     esnTuner = tuner.ESNErdosTuner(size=300,
+    #                               initialTransient=initialTransient,
+    #                               trainingInputData=featureTrainingVectors,
+    #                               trainingOutputData=targetTrainingVectors,
+    #                               validationInputData=featureValidationVectors,
+    #                               validationOutputData=targetValidationVectors,
+    #                               inputConnectivityBound=inputConnectivityBound,
+    #                               probabilityBound=probabilityBound,
+    #                               times=3)
+    #     inputConnectivityOptimum, probabilityOptimum = esnTuner.getOptimalParameters()
+    #
+    #     network = esn.EchoStateNetwork(size=size,
+    #                                    inputData=featureTrainingVectors,
+    #                                    outputData=targetTrainingVectors,
+    #                                    reservoirTopology=topology.ErdosRenyiTopology(size=size,
+    #                                                                                  probability=probabilityOptimum),
+    #                                    initialTransient=initialTransient,
+    #                                    inputConnectivity=inputConnectivityOptimum)
+    #     network.trainReservoir()
+    #
+    #     # # Warm-up the network
+    #     # trainingPredictedOutputData = network.predict(featureValidationVectors)
+    #
+    #     # Store it and it will be used in the predictFuture method
+    #     self.esn = network
 
     def predictFuture(self, availableSeries, depth, horizon):
 

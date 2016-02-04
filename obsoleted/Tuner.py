@@ -75,7 +75,7 @@ class ESNTuner:
         predictedOutputData = esn.predict(self.validationInputData)
 
         #Calcuate the regression error
-        errorFunction = rmse.RootMeanSquareError()
+        errorFunction = rmse.MeanSquareError()
         regressionError = errorFunction.compute(self.validationOutputData, predictedOutputData)
 
         #Free the memory
@@ -140,7 +140,7 @@ class ESNTunerWithConnectivity:
             predictedOutputData = esn.predict(self.validationInputData)
 
             #Calcuate the regression error
-            errorFunction = rmse.RootMeanSquareError()
+            errorFunction = rmse.MeanSquareError()
             regressionError = errorFunction.compute(self.validationOutputData, predictedOutputData)
             cumRMSE += regressionError
 
@@ -182,7 +182,7 @@ class ESNTunerWithConnectivity:
         predictedOutputData = esn.predict(self.validationInputData)
 
         #Calcuate the regression error
-        errorFunction = rmse.RootMeanSquareError()
+        errorFunction = rmse.MeanSquareError()
         regressionError = errorFunction.compute(self.validationOutputData, predictedOutputData)
 
         #Free the memory
@@ -256,7 +256,7 @@ class ESNMinimalTunerWithConnectivity:
         predictedOutputData = esn.predict(self.validationInputData)
 
         #Calcuate the regression error
-        errorFunction = rmse.RootMeanSquareError()
+        errorFunction = rmse.MeanSquareError()
         regressionError = errorFunction.compute(self.validationOutputData, predictedOutputData)
 
         #Free the memory
@@ -291,7 +291,7 @@ class ESNMinimalTunerWithConnectivity:
         predictedOutputData = esn.predict(self.validationInputData)
 
         #Calcuate the regression error
-        errorFunction = rmse.RootMeanSquareError()
+        errorFunction = rmse.MeanSquareError()
         regressionError = errorFunction.compute(self.validationOutputData, predictedOutputData)
 
         #Free the memory
@@ -502,7 +502,7 @@ class ESNErdosFullTuner:
             predictedOutputData = esn.predict(self.validationInputData)
 
             #Calcuate the regression error
-            errorFunction = rmse.RootMeanSquareError()
+            errorFunction = rmse.MeanSquareError()
             regressionError = errorFunction.compute(self.validationOutputData, predictedOutputData)
             cumRMSE += regressionError
 
@@ -544,7 +544,7 @@ class ESNErdosFullTuner:
         predictedOutputData = esn.predict(self.validationInputData)
 
         #Calcuate the regression error
-        errorFunction = rmse.RootMeanSquareError()
+        errorFunction = rmse.MeanSquareError()
         regressionError = errorFunction.compute(self.validationOutputData, predictedOutputData)
 
         #Free the memory
@@ -694,7 +694,7 @@ class ESNSmallWorldGraphsFullTuner:
             predictedOutputData = esn.predict(self.validationInputData)
 
             #Calcuate the regression error
-            errorFunction = rmse.RootMeanSquareError()
+            errorFunction = rmse.MeanSquareError()
             regressionError = errorFunction.compute(self.validationOutputData, predictedOutputData)
             cumRMSE += regressionError
 
@@ -737,7 +737,7 @@ class ESNSmallWorldGraphsFullTuner:
         predictedOutputData = esn.predict(self.validationInputData)
 
         #Calcuate the regression error
-        errorFunction = rmse.RootMeanSquareError()
+        errorFunction = rmse.MeanSquareError()
         regressionError = errorFunction.compute(self.validationOutputData, predictedOutputData)
 
         #Free the memory
@@ -880,7 +880,7 @@ class ESNScaleFreeNetworksTuner:
             predictedOutputData = esn.predict(self.validationInputData)
 
             #Calcuate the regression error
-            errorFunction = rmse.RootMeanSquareError()
+            errorFunction = rmse.MeanSquareError()
             regressionError = errorFunction.compute(self.validationOutputData, predictedOutputData)
             cumRMSE += regressionError
 
@@ -943,7 +943,7 @@ class ESNSmallWorldGraphsTuner:
             predictedOutputData = esn.predict(self.validationInputData)
 
             #Calcuate the regression error
-            errorFunction = rmse.RootMeanSquareError()
+            errorFunction = rmse.MeanSquareError()
             regressionError = errorFunction.compute(self.validationOutputData, predictedOutputData)
             cumRMSE += regressionError
 
@@ -1003,7 +1003,7 @@ class ESNErdosTuner:
             predictedOutputData = esn.predict(self.validationInputData)
 
             #Calcuate the regression error
-            errorFunction = rmse.RootMeanSquareError()
+            errorFunction = rmse.MeanSquareError()
             regressionError = errorFunction.compute(self.validationOutputData, predictedOutputData)
             cumRMSE += regressionError
 
@@ -1063,7 +1063,7 @@ class ESNConnTuner:
             predictedOutputData = esn.predict(self.validationInputData)
 
             #Calcuate the regression error
-            errorFunction = rmse.RootMeanSquareError()
+            errorFunction = rmse.MeanSquareError()
             regressionError = errorFunction.compute(self.validationOutputData, predictedOutputData)
             cumRMSE += regressionError
 

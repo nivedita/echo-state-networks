@@ -59,7 +59,7 @@ predictedTrainingOutputData = res.predict(inputTrainingData)
 predictedTestOutputData = util.predictFuture(res, trainingData[-1], nTesting)
 
 #Calculate the error
-errorFunction = rmse.RootMeanSquareError()
+errorFunction = rmse.MeanSquareError()
 error = errorFunction.compute(testingData, predictedTestOutputData)
 print("Regression error:"+str(error))
 

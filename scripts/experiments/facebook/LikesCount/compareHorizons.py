@@ -135,7 +135,7 @@ for horizon in horizonList:
     xAxisDict[str(horizon)] = xAxis
 
     #Calculate the error
-    errorFunction = rmse.RootMeanSquareError()
+    errorFunction = rmse.MeanSquareError()
     error = errorFunction.compute(actualDataLim.reshape(1, horizon), deScaled.reshape(1,horizon))
     regressionError.append(error)
 

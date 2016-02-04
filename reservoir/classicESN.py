@@ -1,9 +1,16 @@
 import numpy as np
 import scipy.linalg as la
 import scipy.sparse.linalg as sla
+from scipy.special import expit
+from enum import Enum
+
+class ActivationFunction(Enum):
+    TANH = 1
+    EXPIT = 2
+
 
 class Reservoir:
-    def __init__(self, size, spectralRadius, inputScaling, reservoirScaling, leakingRate, initialTransient, inputData, outputData, inputWeightRandom = None, reservoirWeightRandom = None):
+    def __init__(self, size, spectralRadius, inputScaling, reservoirScaling, leakingRate, initialTransient, inputData, outputData, inputWeightRandom = None, reservoirWeightRandom = None, activationFunction=ActivationFunction.TANH):
         """
         :param Nx: size of the reservoir
         :param spectralRadius: spectral radius for reservoir weight matrix
@@ -30,22 +37,28 @@ class Reservoir:
         self.reservoirWeight = np.zeros((self.Nx, self.Nx))
         self.outputWeight = np.zeros((self.Ny, self.Nx))
 
-        if(inputWeightRandom == None):
+        if(inputWeightRandom is None):
             self.inputWeightRandom = np.random.rand(self.Nx, self.Nu)
         else:
             self.inputWeightRandom = inputWeightRandom
-        if(reservoirWeightRandom == None):
+        if(reservoirWeightRandom is None):
             self.reservoirWeightRandom = np.random.rand(self.Nx, self.Nx)
         else:
             self.reservoirWeightRandom = reservoirWeightRandom
 
-        #Generate the input and reservoir weights
+        # Generate the input and reservoir weights
         self.__generateInputWeight()
         self.__generateReservoirWeight()
 
-        #Internal states
+        # Internal states
         self.internalState = np.zeros((self.inputN-self.initialTransient, self.Nx))
         self.latestInternalState = np.zeros(self.Nx)
+
+        # Activation Function
+        if activationFunction == ActivationFunction.TANH:
+            self.activation = np.tanh
+        elif activationFunction == ActivationFunction.EXPIT:
+            self.activation = expit
 
 
     def __generateInputWeight(self):
@@ -81,7 +94,7 @@ class Reservoir:
         for t in range(self.inputN):
             term1 = np.dot(self.inputWeight,self.inputData[t])
             term2 = np.dot(self.reservoirWeight,internalState)
-            internalState = (1.0-self.leakingRate)*internalState + self.leakingRate*np.tanh(term1 + term2)
+            internalState = (1.0-self.leakingRate)*internalState + self.leakingRate*self.activation(term1 + term2)
             if t >= self.initialTransient:
                 self.internalState[t-self.initialTransient] = internalState
 
@@ -108,7 +121,7 @@ class Reservoir:
             #reservoir activation
             term1 = np.dot(self.inputWeight,testInputData[t])
             term2 = np.dot(self.reservoirWeight,internalState)
-            internalState = (1-self.leakingRate)*internalState + self.leakingRate*np.tanh(term1 + term2)
+            internalState = (1-self.leakingRate)*internalState + self.leakingRate*self.activation(term1 + term2)
 
             #compute output
             output = np.dot(self.outputWeight, internalState)
@@ -123,7 +136,7 @@ class Reservoir:
     def predictOnePoint(self, testInput):
         term1 = np.dot(self.inputWeight,testInput[0])
         term2 = np.dot(self.reservoirWeight,self.latestInternalState)
-        self.latestInternalState = (1-self.leakingRate)*self.latestInternalState + self.leakingRate*np.tanh(term1 + term2)
+        self.latestInternalState = (1-self.leakingRate)*self.latestInternalState + self.leakingRate*self.activation(term1 + term2)
 
         #compute output
         output = np.dot(self.outputWeight, self.latestInternalState)

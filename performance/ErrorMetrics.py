@@ -14,7 +14,7 @@ from sklearn.metrics import mean_squared_error, r2_score
 #         rmse = mean_squared_error(actual, predicted)**0.5
 #         return rmse
 
-class RootMeanSquareError:
+class MeanSquareError:
     def compute(self, actual, predicted):
         rmse = mean_squared_error(actual, predicted)
         return rmse
@@ -25,5 +25,5 @@ class R2Score:
         return r2
 
 if __name__ == "__main__":
-    error = RootMeanSquareError()
+    error = MeanSquareError()
     error.compute(np.array([[1, 2],[3, 2]]), np.array([[4, 3],[3, 3]]))

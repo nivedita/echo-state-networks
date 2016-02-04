@@ -31,7 +31,7 @@ nTesting = testingData.shape[0]
 
 # Form feature vectors for training data
 trainingInputData, trainingOutputData = util.formFeatureVectors(trainingData)
-actualOutputData = minMax.inverse_transform(np.vstack((validationData[:nValidation],testingData[:nTesting])))[:,0]
+actualOutputData = minMax.inverse_transform(testingData)[:,0]
 
 # Initial seed
 initialSeedForValidation = trainingData[-1]
@@ -50,7 +50,7 @@ predictedOutputData = minMax.inverse_transform(predictedOutputData)
 outputFolderName = "Outputs/Outputs" + datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
 os.mkdir(outputFolderName)
 outplot = outputPlot.OutputPlot(outputFolderName + "/Prediction.html", "Mackey-Glass Time Series - Small World Graphs (Tuned)", "Prediction on Validation + Testing Set", "Time", "Output")
-outplot.setXSeries(np.arange(1, nValidation + nTesting + 1))
+outplot.setXSeries(np.arange(1, nTesting + 1))
 outplot.setYSeries('Actual Output', actualOutputData)
 outplot.setYSeries('Predicted Output', predictedOutputData)
 outplot.createOutput()
