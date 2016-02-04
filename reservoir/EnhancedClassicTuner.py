@@ -232,7 +232,7 @@ class RandomConnectivityBruteTuner:
         reservoirConnectivity = float(x)
 
         # To get rid off the randomness in assigning weights, run it 10 times and  take the average error
-        times = 10
+        times = 100
         cumulativeError = 0
 
         for i in range(times):
@@ -321,7 +321,7 @@ class ErdosRenyiConnectivityBruteTuner:
         probability = x
 
         # To get rid off the randomness in assigning weights, run it 10 times and  take the average error
-        times = 10
+        times = 100
         cumulativeError = 0
 
         for i in range(times):
@@ -410,7 +410,7 @@ class ScaleFreeNetworksConnectivityBruteTuner:
         attachment = int(x)
 
         # To get rid off the randomness in assigning weights, run it 10 times and  take the average error
-        times = 10
+        times = 100
         cumulativeError = 0
 
         for i in range(times):
@@ -472,7 +472,7 @@ class SmallWorldGraphsConnectivityBruteTuner:
         self.horizon = self.validationOutputData.shape[0]
 
         # Ranges for mean degree k and beta
-        self.ranges = (slice(2,self.size - 1,10), slice(0.1,1.0,0.10))
+        self.ranges = (slice(2,self.size - 1,4), slice(0.1,1.0,0.05))
 
         # Input-to-reservoir is of Classic Type - Fully connected and maintained as constant
         self.inputN, self.inputD = self.trainingInputData.shape
@@ -500,7 +500,7 @@ class SmallWorldGraphsConnectivityBruteTuner:
         meanDegree = int(meanDegree)
 
         # To get rid off the randomness in assigning weights, run it 10 times and  take the average error
-        times = 10
+        times = 100
         cumulativeError = 0
 
         for i in range(times):
