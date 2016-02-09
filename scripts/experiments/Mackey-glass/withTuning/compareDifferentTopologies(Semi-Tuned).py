@@ -4,6 +4,9 @@
 # 2. Give the data to the reservoir
 # 3. Plot the performance (such as error rate/accuracy)
 
+import sys
+sys.path.append('C:/Users/Raj/PycharmProjects/echo-state-networks')
+
 from plotting import OutputPlot as outputPlot, ErrorPlot as errorPlot
 import numpy as np
 from reservoir import Utility as util
@@ -26,11 +29,11 @@ data = np.loadtxt('MackeyGlass_t17.txt')
 minMax = pp.MinMaxScaler((-1,1))
 data = minMax.fit_transform(data)
 
-#Get only 5000 points
-data = data[:5000].reshape((5000, 1))
+#Get only 6000 points
+data = data[:6000].reshape((6000, 1))
 
 # Split the data into training, validation and testing
-trainingData, validationData, testingData = util.splitData(data, 0.4, 0.4, 0.2)
+trainingData, validationData, testingData = util.splitData(data, 0.5, 0.25, 0.25)
 nValidation = validationData.shape[0]
 nTesting = testingData.shape[0]
 

@@ -198,6 +198,52 @@ def tuneTrainPredictConnectivity(trainingInputData, trainingOutputData, validati
     return predictedOutputData
 
 
+def tuneTrainPredictConnectivityNonBrute(trainingInputData, trainingOutputData, validationOutputData,
+                                            initialInputSeedForValidation, horizon, size=512,initialTransient=50,
+                                            resTopology = Topology.Random):
+
+    # Other reservoir parameters
+    spectralRadius = 0.79
+    inputScaling = 0.5
+    reservoirScaling = 0.5
+    leakingRate = 0.3
+
+    if(resTopology == Topology.Random):
+        resTuner = tuner.RandomConnectivityTuner(size=size,
+                                                 initialTransient=initialTransient,
+                                                 trainingInputData=trainingInputData,
+                                                 trainingOutputData=trainingOutputData,
+                                                 initialSeed=initialInputSeedForValidation,
+                                                 validationOutputData=validationOutputData,
+                                                 spectralRadius=spectralRadius, inputScaling=inputScaling,
+                                                 reservoirScaling=reservoirScaling, leakingRate=leakingRate)
+        reservoirConnectivityOptimum = resTuner.getOptimalParameters()
+        inputWeightMatrix = topology.ClassicInputTopology(inputSize=trainingInputData.shape[1], reservoirSize=size).generateWeightMatrix()
+        reservoirWeightMatrix = topology.RandomReservoirTopology(size=size, connectivity=reservoirConnectivityOptimum).generateWeightMatrix()
+
+
+    #Train
+    network = ESN.Reservoir(size=size,
+                            spectralRadius=spectralRadius,
+                            inputScaling=inputScaling,
+                            reservoirScaling=reservoirScaling,
+                            leakingRate=leakingRate,
+                            initialTransient=initialTransient,
+                            inputData=trainingInputData,
+                            outputData=trainingOutputData,
+                            inputWeightRandom=inputWeightMatrix,
+                            reservoirWeightRandom=reservoirWeightMatrix)
+    network.trainReservoir()
+
+    warmupFeatureVectors, warmTargetVectors = formFeatureVectors(validationOutputData)
+    predictedWarmup = network.predict(warmupFeatureVectors[-initialTransient:])
+
+    initialInputSeedForTesing = validationOutputData[-1]
+
+    predictedOutputData = predictFuture(network, initialInputSeedForTesing, horizon)[:,0]
+    return predictedOutputData
+
+
 
 
 def tuneConnectivity(trainingInputData, trainingOutputData, validationOutputData,
@@ -217,7 +263,7 @@ def tuneConnectivity(trainingInputData, trainingOutputData, validationOutputData
 
     if(resTopology == Topology.Classic):
         # Run 100 times and get the average regression error
-        iterations = 100
+        iterations = 1000
         cumulativeError = 0.0
         for i in range(iterations):
             inputWeightMatrix = topology.ClassicInputTopology(inputSize=trainingInputData.shape[1], reservoirSize=size).generateWeightMatrix()
@@ -257,7 +303,7 @@ def tuneConnectivity(trainingInputData, trainingOutputData, validationOutputData
         optimalParameters["Optimal_Reservoir_Connectivity"] = reservoirConnectivityOptimum
 
         # Run 100 times and get the average regression error
-        iterations = 100
+        iterations = 1000
         cumulativeError = 0.0
         for i in range(iterations):
             inputWeightMatrix = topology.ClassicInputTopology(inputSize=trainingInputData.shape[1], reservoirSize=size).generateWeightMatrix()
@@ -296,7 +342,7 @@ def tuneConnectivity(trainingInputData, trainingOutputData, validationOutputData
         optimalParameters["Optimal_Connectivity_Probability"] = probabilityOptimum
 
         # Run 100 times and get the average regression error
-        iterations = 100
+        iterations = 1000
         cumulativeError = 0.0
         for i in range(iterations):
             inputWeightMatrix = topology.ClassicInputTopology(inputSize=trainingInputData.shape[1], reservoirSize=size).generateWeightMatrix()
@@ -335,7 +381,7 @@ def tuneConnectivity(trainingInputData, trainingOutputData, validationOutputData
         optimalParameters["Optimal_Preferential_Attachment"] = attachmentOptimum
 
         # Run 100 times and get the average regression error
-        iterations = 100
+        iterations = 1000
         cumulativeError = 0.0
         for i in range(iterations):
             inputWeightMatrix = topology.ClassicInputTopology(inputSize=trainingInputData.shape[1], reservoirSize=size).generateWeightMatrix()
@@ -375,7 +421,7 @@ def tuneConnectivity(trainingInputData, trainingOutputData, validationOutputData
         optimalParameters["Optimal_Beta"] = betaOptimum
 
         # Run 100 times and get the average regression error
-        iterations = 100
+        iterations = 1000
         cumulativeError = 0.0
         for i in range(iterations):
             inputWeightMatrix = topology.ClassicInputTopology(inputSize=trainingInputData.shape[1], reservoirSize=size).generateWeightMatrix()

@@ -109,7 +109,7 @@ class ReservoirParameterTuner:
 
 class RandomConnectivityTuner:
     def __init__(self, size, initialTransient, trainingInputData, trainingOutputData,
-                 initialSeed, validationOutputData, reservoirConnectivityBound,
+                 initialSeed, validationOutputData, reservoirConnectivityBound = (0.1,1.0),
                  minimizer=Minimizer.DifferentialEvolution, initialGuess=0.5,
                  spectralRadius = 0.79, inputScaling = 0.5, reservoirScaling=0.5, leakingRate=0.3):
         self.size = size
@@ -136,18 +136,16 @@ class RandomConnectivityTuner:
     def __reservoirTrain__(self, x):
 
         #Extract the parameters
-        reservoirConnectivity = x[0]
+        reservoirConnectivity = float(x)
 
         # To get rid off the randomness in assigning weights, run it 10 times and  take the average error
-        times = 1
-        error = 0
+        times = 10
+        cumulativeError = 0
 
         for i in range(times):
-
-            self.inputWeight = topology.ClassicInputTopology(self.inputD, self.size).generateWeightMatrix()
-
-            # Reservoir Weight Matrix
-            reservoirWeight = topology.RandomReservoirTopology(size=self.size, connectivity=reservoirConnectivity).generateWeightMatrix()
+            # Input and weight connectivity Matrix
+            inputWeightMatrix = topology.ClassicInputTopology(self.inputD, self.size).generateWeightMatrix()
+            reservoirWeightMatrix = topology.RandomReservoirTopology(size=self.size, connectivity=reservoirConnectivity).generateWeightMatrix()
 
             #Create the reservoir
             res = classicESN.Reservoir(size=self.size,
@@ -158,8 +156,8 @@ class RandomConnectivityTuner:
                                       initialTransient=self.initialTransient,
                                       inputData=self.trainingInputData,
                                       outputData=self.trainingOutputData,
-                                      inputWeightRandom=self.inputWeight,
-                                      reservoirWeightRandom=reservoirWeight)
+                                      inputWeightRandom=inputWeightMatrix,
+                                      reservoirWeightRandom=reservoirWeightMatrix)
 
             #Train the reservoir
             res.trainReservoir()
@@ -173,10 +171,11 @@ class RandomConnectivityTuner:
             gc.collect()
 
             #Calcuate the regression error
-            errorFunction = rmse.RootMeanSquareError()
-            error += errorFunction.compute(self.validationOutputData, predictedOutputData)
+            errorFunction = metrics.MeanSquareError()
+            error = errorFunction.compute(self.validationOutputData, predictedOutputData)
+            cumulativeError += error
 
-        regressionError = error/times
+        regressionError = cumulativeError/times
 
         #Return the error
         print("\nThe Parameters: "+str(x)+" Regression error:"+str(regressionError))
@@ -194,7 +193,7 @@ class RandomConnectivityTuner:
             mytakestep = ParameterStep()
             result = optimize.basinhopping(self.__reservoirTrain__, x0=self.initialGuess, minimizer_kwargs=minimizer_kwargs, take_step=mytakestep, stepsize=0.01)
             print("The Optimization results are :"+str(result))
-            return result.x[0], self.inputWeight
+            return result.x[0]
     def getOptimalParameters(self):
         return self.__tune__()
 
@@ -209,7 +208,7 @@ class RandomConnectivityBruteTuner:
         self.initialSeed = initialSeed
         self.validationOutputData = validationOutputData
         self.horizon = self.validationOutputData.shape[0]
-        self.ranges = slice(0.1,1.0,0.01)
+        self.ranges = slice(0.01,1.01,0.01)
 
         # Input-to-reservoir is of Classic Type - Fully connected and maintained as constant
         self.inputN, self.inputD = self.trainingInputData.shape
@@ -294,7 +293,7 @@ class ErdosRenyiConnectivityBruteTuner:
         self.horizon = self.validationOutputData.shape[0]
 
         # Probability ranges
-        self.ranges = slice(0.1,1.0,0.01)
+        self.ranges = slice(0.01,1.01,0.01)
 
         # Input-to-reservoir is of Classic Type - Fully connected and maintained as constant
         self.inputN, self.inputD = self.trainingInputData.shape
@@ -472,7 +471,7 @@ class SmallWorldGraphsConnectivityBruteTuner:
         self.horizon = self.validationOutputData.shape[0]
 
         # Ranges for mean degree k and beta
-        self.ranges = (slice(2,self.size - 1,4), slice(0.1,1.0,0.05))
+        self.ranges = (slice(2,self.size - 1,2), slice(0.11,1.01,0.01))
 
         # Input-to-reservoir is of Classic Type - Fully connected and maintained as constant
         self.inputN, self.inputD = self.trainingInputData.shape
