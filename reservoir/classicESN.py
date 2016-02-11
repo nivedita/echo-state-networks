@@ -7,10 +7,16 @@ from enum import Enum
 class ActivationFunction(Enum):
     TANH = 1
     EXPIT = 2
+    ReLU = 3
 
+
+def _npRelu(np_features):
+    return np.maximum(np_features, np.zeros(np_features.shape))
 
 class Reservoir:
-    def __init__(self, size, spectralRadius, inputScaling, reservoirScaling, leakingRate, initialTransient, inputData, outputData, inputWeightRandom = None, reservoirWeightRandom = None, activationFunction=ActivationFunction.TANH):
+    def __init__(self, size, spectralRadius, inputScaling, reservoirScaling, leakingRate, initialTransient,
+                 inputData, outputData, inputWeightRandom = None, reservoirWeightRandom = None,
+                 activationFunction=ActivationFunction.TANH):
         """
         :param Nx: size of the reservoir
         :param spectralRadius: spectral radius for reservoir weight matrix
@@ -59,6 +65,8 @@ class Reservoir:
             self.activation = np.tanh
         elif activationFunction == ActivationFunction.EXPIT:
             self.activation = expit
+        elif activationFunction == ActivationFunction.ReLU:
+            self.activation = _npRelu
 
 
     def __generateInputWeight(self):
@@ -123,8 +131,10 @@ class Reservoir:
             term2 = np.dot(self.reservoirWeight,internalState)
             internalState = (1-self.leakingRate)*internalState + self.leakingRate*self.activation(term1 + term2)
 
-            #compute output
+            # Output
             output = np.dot(self.outputWeight, internalState)
+            # Apply Relu to output
+            output = _npRelu(output)
             testOutputData[t, :] = output
 
         #This is to preserve the internal state between multiple predict calls
@@ -138,6 +148,8 @@ class Reservoir:
         term2 = np.dot(self.reservoirWeight,self.latestInternalState)
         self.latestInternalState = (1-self.leakingRate)*self.latestInternalState + self.leakingRate*self.activation(term1 + term2)
 
-        #compute output
+        # Output - Non-linearity applied through activation function
         output = np.dot(self.outputWeight, self.latestInternalState)
+        # Apply Relu to output
+        output = _npRelu(output)
         return output
