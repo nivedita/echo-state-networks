@@ -22,7 +22,7 @@ for i in range(len(profileList)):
     datasetFileName = directoryName + profileName + "_time_interaction_rate.csv"
 
     daysOfHorizon = 10
-    daysOfDepth = 30
+    daysOfDepth = 90
     horizon = 24*daysOfHorizon#7 days ahead
     depth = 24*daysOfDepth #30 days
     util = Utility.SeriesUtility()

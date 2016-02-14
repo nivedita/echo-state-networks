@@ -63,19 +63,19 @@ def predictFuture(network, seed, horizon):
     return predictedTestOutputData
 
 def tuneTrainPredict(trainingInputData, trainingOutputData, validationOutputData,
-                 initialInputSeedForValidation, horizon, size = 256,initialTransient=50,
-                 spectralRadiusBound=(0.5,1.0),
+                 initialInputSeedForValidation, testingData, size = 256,initialTransient=50,
+                 spectralRadiusBound=(0.0,1.0),
                  inputScalingBound=(0.0,1.0),
                  reservoirScalingBound=(0.0,1.0),
-                 leakingRateBound=(0.1,0.5),
+                 leakingRateBound=(0.0,1.0),
                  reservoirTopology=None):
 
     # Generate the input and reservoir weight matrices based on the reservoir topology
-    inputWeightMatrix = topology.ClassicInputTopology(size, trainingInputData.shape[1]).generateWeightMatrix()
+    inputWeightMatrix = topology.ClassicInputTopology(inputSize=trainingInputData.shape[1], reservoirSize=size).generateWeightMatrix()
     if reservoirTopology is None:
-        reservoirWeightMatrix = topology.ClassicReservoirTopology(size).generateWeightMatrix()
+        reservoirWeightMatrix = topology.ClassicReservoirTopology(size=size).generateWeightMatrix()
     else: #TODO - think about matrix multiplication
-        reservoirWeightMatrix = reservoirTopology.generateConnectivityMatrix()
+        reservoirWeightMatrix = reservoirTopology.generateWeightMatrix()
 
     resTuner = tuner.ReservoirParameterTuner(size=size,
                                              initialTransient=initialTransient,
@@ -89,7 +89,7 @@ def tuneTrainPredict(trainingInputData, trainingOutputData, validationOutputData
                                              leakingRateBound=leakingRateBound,
                                              inputWeightMatrix=inputWeightMatrix,
                                              reservoirWeightMatrix=reservoirWeightMatrix,
-                                             minimizer=tuner.Minimizer.BasinHopping)
+                                             minimizer=tuner.Minimizer.DifferentialEvolution)
     spectralRadiusOptimum, inputScalingOptimum, reservoirScalingOptimum, leakingRateOptimum = resTuner.getOptimalParameters()
 
     #Train
@@ -110,8 +110,30 @@ def tuneTrainPredict(trainingInputData, trainingOutputData, validationOutputData
 
     initialInputSeedForTesing = validationOutputData[-1]
 
-    predictedOutputData = predictFuture(network, initialInputSeedForTesing, horizon)[:,0]
-    return predictedOutputData
+    predictedOutputData = predictFuture(network, initialInputSeedForTesing, testingData.shape[0])[:,0]
+
+
+    cumError = 0
+    times = 100
+    for i in range(times):
+        # Run for many time and get the average regression error
+        regressionError = util.trainAndGetError(size=size,
+                                                spectralRadius=spectralRadiusOptimum,
+                                                inputScaling=inputScalingOptimum,
+                                                reservoirScaling=reservoirScalingOptimum,
+                                                leakingRate=leakingRateOptimum,
+                                                initialTransient=initialTransient,
+                                                trainingInputData=trainingInputData,
+                                                trainingOutputData=trainingOutputData,
+                                                inputWeightMatrix=inputWeightMatrix,
+                                                reservoirWeightMatrix=reservoirWeightMatrix,
+                                                validationOutputData=validationOutputData,
+                                                horizon=testingData.shape[0],
+                                                testingActualOutputData=testingData)
+        cumError += regressionError
+
+    error = cumError/times
+    return predictedOutputData, error
 
 def tuneTrainPredictConnectivity(trainingInputData, trainingOutputData, validationOutputData,
                                             initialInputSeedForValidation, horizon, size=256,initialTransient=50,

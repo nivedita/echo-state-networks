@@ -305,7 +305,8 @@ class SeriesUtility:
                                 outputData=targetVectors,
                                 inputWeightRandom=inputWeightMatrix,
                                 reservoirWeightRandom=reservoirWeightMatrix,
-                                activationFunction=esn.ActivationFunction.EXPIT)
+                                activationFunction=esn.ActivationFunction.EXPIT,
+                                outputRelu=True)
 
         network.trainReservoir()
 
@@ -557,7 +558,8 @@ class SeriesUtility:
                                 outputData=targetVectors,
                                 inputWeightRandom=inputWeightMatrix,
                                 reservoirWeightRandom=reservoirWeightMatrix,
-                                activationFunction=esn.ActivationFunction.EXPIT)
+                                activationFunction=esn.ActivationFunction.EXPIT,
+                                outputRelu=True)
 
         network.trainReservoir()
 
@@ -597,11 +599,11 @@ class SeriesUtility:
         # Calculate the correlation coefficients
         correlationCoefficients = self.getCorrelationCoefficients(featureVectors, targetVectors)
 
-        # Now, vary the drop threshold and get the features and choose the best one
+        # Now, vary the cut-off threshold and get the features and choose the best one
         # TODO: Also, have to think about the depth (Probably, this has to be tuned as well)
 
         errorFun = metrics.MeanSquareError()
-        thresholdRange = np.arange(0.30, 1.0, 0.05).tolist()
+        thresholdRange = np.arange(0.1, 0.5, 0.02).tolist()
         bestIndices = None
         bestFeatures = None
         bestError = np.inf
@@ -615,10 +617,12 @@ class SeriesUtility:
             # Measure the error between predicted series and validation series
             validationError = errorFun.compute(validationSeries.values, predictedSeries.values)
 
+            print("Cut-off threshold: "+str(i)+" Regression Error: "+ str(validationError))
+
             if(validationError < bestError):
                 bestError = validationError
-                bestIndices = indices
-                bestFeatures = features
+                bestIndices = np.copy(indices) # Stupid mutations TODO: Check for mutation in other places
+                bestFeatures = np.copy(features)
 
         # Return the best features, indices, and target vectors
         return bestIndices, bestFeatures, targetVectors

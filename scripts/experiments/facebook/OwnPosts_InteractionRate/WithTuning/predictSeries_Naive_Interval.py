@@ -13,11 +13,11 @@ networkParameters['inputScaling'] = 0.5
 networkParameters['reservoirScaling'] = 0.5
 networkParameters['leakingRate'] = 0.3
 networkParameters['reservoirConnectivity'] = 0.3
-networkParameters['arbitraryDepth'] = 24 * 30 # Depth of 1 year
+networkParameters['arbitraryDepth'] = 24 * 90 # Depth of 1 year
 
 # Dataset
 directoryName = "Datasets/"
-profileName = "Mercedes-Benz"
+profileName = "Dodge"
 datasetFileName = directoryName + profileName + "_time_interaction_rate.csv"
 
 # Horizon - used to split the training and testing

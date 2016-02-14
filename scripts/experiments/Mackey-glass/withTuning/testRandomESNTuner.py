@@ -39,7 +39,7 @@ actualOutputData = minMax.inverse_transform(testingData)[:,0]
 # Initial seed
 initialSeedForValidation = trainingData[-1]
 
-predictedOutputData = util.tuneTrainPredictConnectivityNonBrute(trainingInputData=trainingInputData,
+predictedOutputData = util.tuneTrainPredictConnectivity(trainingInputData=trainingInputData,
                                                         trainingOutputData=trainingOutputData,
                                                         validationOutputData=validationData,
                                                         initialInputSeedForValidation=initialSeedForValidation,
