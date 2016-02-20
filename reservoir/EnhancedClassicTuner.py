@@ -83,7 +83,7 @@ class ReservoirParameterTuner:
         gc.collect()
 
         #Calcuate the regression error
-        errorFunction = rmse.RootMeanSquareError()
+        errorFunction = metrics.MeanSquareError()
         regressionError = errorFunction.compute(self.validationOutputData, predictedOutputData)
 
         #Return the error
@@ -471,7 +471,7 @@ class SmallWorldGraphsConnectivityBruteTuner:
         self.horizon = self.validationOutputData.shape[0]
 
         # Ranges for mean degree k and beta
-        self.ranges = (slice(2,self.size - 1,2), slice(0.11,1.01,0.01))
+        self.ranges = (slice(2,self.size - 1,2), slice(0.11,1.01,0.05))
 
         # Input-to-reservoir is of Classic Type - Fully connected and maintained as constant
         self.inputN, self.inputD = self.trainingInputData.shape
@@ -547,3 +547,4 @@ class SmallWorldGraphsConnectivityBruteTuner:
         return result[0]
     def getOptimalParameters(self):
         return self.__tune__()
+

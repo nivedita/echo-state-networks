@@ -199,7 +199,7 @@ def tuneTrainPredictConnectivity(trainingInputData, trainingOutputData, validati
 
 
 def tuneTrainPredictConnectivityNonBrute(trainingInputData, trainingOutputData, validationOutputData,
-                                            initialInputSeedForValidation, horizon, size=512,initialTransient=50,
+                                            initialInputSeedForValidation, horizon, size=256,initialTransient=50,
                                             resTopology = Topology.Random):
 
     # Other reservoir parameters
@@ -221,6 +221,18 @@ def tuneTrainPredictConnectivityNonBrute(trainingInputData, trainingOutputData, 
         inputWeightMatrix = topology.ClassicInputTopology(inputSize=trainingInputData.shape[1], reservoirSize=size).generateWeightMatrix()
         reservoirWeightMatrix = topology.RandomReservoirTopology(size=size, connectivity=reservoirConnectivityOptimum).generateWeightMatrix()
 
+    elif(resTopology == Topology.SmallWorldGraphs):
+        resTuner = tuner.SmallWorldGraphsConnectivityNonBruteTuner(size=size,
+                                                 initialTransient=initialTransient,
+                                                 trainingInputData=trainingInputData,
+                                                 trainingOutputData=trainingOutputData,
+                                                 initialSeed=initialInputSeedForValidation,
+                                                 validationOutputData=validationOutputData,
+                                                 spectralRadius=spectralRadius, inputScaling=inputScaling,
+                                                 reservoirScaling=reservoirScaling, leakingRate=leakingRate)
+        meanDegreeOptimum, betaOptimum  = resTuner.getOptimalParameters()
+        inputWeightMatrix = topology.ClassicInputTopology(inputSize=trainingInputData.shape[1], reservoirSize=size).generateWeightMatrix()
+        reservoirWeightMatrix = topology.SmallWorldGraphs(size=size, meanDegree=int(meanDegreeOptimum), beta=betaOptimum).generateWeightMatrix()
 
     #Train
     network = ESN.Reservoir(size=size,
