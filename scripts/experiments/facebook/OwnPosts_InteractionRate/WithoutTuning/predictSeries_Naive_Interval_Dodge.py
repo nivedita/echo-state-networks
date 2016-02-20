@@ -8,7 +8,7 @@ import numpy as np
 # Dataset
 directoryName = "Datasets/"
 profileName = "Dodge"
-datasetFileName = directoryName + profileName + "_time_interaction_rate.csv"
+datasetFileName = directoryName + profileName + "_time_interaction.csv"
 
 # Horizon - used to split the training and testing
 daysOfHorizon = 14 # 10 days ahead
@@ -39,10 +39,14 @@ trainingSeries, testingSeries = util.splitIntoTrainingAndTestingSeries(normalize
 featureIntervalList = []
 
 # # 24 hour interval
-period = 90
+period = 30
 for i in range(period, 0, -1):
-    t = -24*i
-    featureIntervalList.append(pd.Timedelta(hours=t))    # T
+    t1 = -24*i
+    t2 = -24*i+1
+    t3 = -24*i-1
+    featureIntervalList.append(pd.Timedelta(hours=t1))
+    featureIntervalList.append(pd.Timedelta(hours=t2))
+    featureIntervalList.append(pd.Timedelta(hours=t3))# T
 # # Latest hours - last 72 hours
 # period = 12
 # for i in range(period, 0, -1):
@@ -60,7 +64,7 @@ featureTrainingVectors = np.hstack((np.ones((featureTrainingVectors.shape[0], 1)
 # Step 7 - Train the network
 networkSize = 2000
 util.trainESNWithoutTuning(size=networkSize, featureVectors=featureTrainingVectors, targetVectors=targetTrainingVectors,
-                            initialTransient=50, inputConnectivity=1.0, reservoirConnectivity=0.3,
+                            initialTransient=50, inputConnectivity=0.7, reservoirConnectivity=0.1,
                             inputScaling=0.5, reservoirScaling=0.5, spectralRadius=0.79, leakingRate=0.30)
 
 

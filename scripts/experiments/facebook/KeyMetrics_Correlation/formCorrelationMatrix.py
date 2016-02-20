@@ -1,7 +1,7 @@
 from utility import Utility
 from datetime import datetime
 from plotting import CorrelationMatrix as mplot
-from scipy.stats import pearsonr
+from scipy.stats import pearsonr, spearmanr
 import os
 import decimal
 
@@ -24,7 +24,8 @@ for i in range(len(metricData)):
     metric1 = metricData[i]
     for j in range(len(metricData)):
         metric2 = metricData[j]
-        correlation, p_value = pearsonr(metric1, metric2)
+        #correlation, p_value = pearsonr(metric1, metric2)
+        correlation, p_value = spearmanr(metric1, metric2)
         correlation = round(decimal.Decimal(correlation),3)
         correlationData = correlationData + "["+str(i)+","+str(j)+","+str(correlation)+"],"
 correlationData = correlationData[0:len(correlationData) - 1]

@@ -6,14 +6,15 @@ import numpy as np
 
 # Network Parameters
 networkParameters = {}
+networkParameters['size'] = 2000
 networkParameters['initialTransient'] = 50
 networkParameters['spectralRadius'] = 0.79
 networkParameters['inputScaling'] = 0.5
 networkParameters['reservoirScaling'] = 0.5
 networkParameters['leakingRate'] = 0.3
-networkParameters['inputConnectivity'] = 1.0
+networkParameters['inputConnectivity'] = 0.7
 networkParameters['reservoirConnectivity'] = 0.1
-networkParameters['arbitraryDepth'] = 24 * 60 # Depth of 1 year
+networkParameters['arbitraryDepth'] = 24 * 90 # Depth of 1 year
 
 # Dataset
 directoryName = "Datasets/"
@@ -47,26 +48,20 @@ trainingSeries, testingSeries = util.splitIntoTrainingAndTestingSeries(normalize
 availableSeries = trainingSeries
 trainingSeries, validationSeries = util.splitIntoTrainingAndValidationSeries(trainingSeries, trainingSetRatio=0.9)
 
-networkParameters['size'] = int(trainingSeries.shape[0]/10) # One-tenth of length of the training set
-#networkParameters['size'] = 256
-
 # Step 6 - Form the feature and target vectors for training
-bestDepth, bestFeaturesIndices, bestFeatures, targetVectors = util.getBestFeatures(trainingSeries, validationSeries, networkParameters, Utility.FeatureSelectionMethod.Pattern_Analysis, args={'threshold': 0.5})
+bestFeaturesIndices, bestFeatures, targetVectors = util.getBestFeatures(trainingSeries, validationSeries, networkParameters)
 
 
-# Step 7 - Tune the leaking rate by brute force
-# optimalLeakingRate = util.getBestLeakingRate(bestFeaturesIndices, bestFeatures, targetVectors, trainingSeries,
-#                                              validationSeries, networkParameters)
-
-# Step 7 - Tune and Train the network
-util.trainESNWithoutTuning(size=networkParameters['size'], featureVectors=bestFeatures, targetVectors=targetVectors, initialTransient=networkParameters['initialTransient'],
+# Step 7 - Train the network
+util.trainESNWithoutTuning(size=networkParameters['size'], featureVectors=bestFeatures, targetVectors=targetVectors,
+                           initialTransient=networkParameters['initialTransient'],
                            inputConnectivity=networkParameters['inputConnectivity'], reservoirConnectivity=networkParameters['reservoirConnectivity'],
                            inputScaling=networkParameters['inputScaling'], reservoirScaling=networkParameters['reservoirScaling'],
                            spectralRadius=networkParameters['spectralRadius'], leakingRate=networkParameters['leakingRate'])
 
 
 # Step 8 - Predict the future
-predictedSeries = util.predict(util.esn, availableSeries, bestDepth, horizon, bestFeaturesIndices)
+predictedSeries = util.predict(util.esn, availableSeries, networkParameters['arbitraryDepth'], horizon, bestFeaturesIndices)
 
 
 # Step 9 - De-scale the series

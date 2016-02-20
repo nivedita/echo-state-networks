@@ -44,10 +44,10 @@ featureTrainingVectors, targetTrainingVectors = util.formContinousFeatureAndTarg
 
 
 # Step 6 - Train the network
-networkSize = 256
+networkSize = 2000
 util.trainESNWithoutTuning(size=networkSize, featureVectors=featureTrainingVectors, targetVectors=targetTrainingVectors,
-                            initialTransient=50, inputConnectivity=1.0, reservoirConnectivity=0.5,
-                            inputScaling=0.0, reservoirScaling=0.0, spectralRadius=0.79, leakingRate=0.45)
+                            initialTransient=50, inputConnectivity=1.0, reservoirConnectivity=0.1,
+                            inputScaling=0.5, reservoirScaling=0.5, spectralRadius=0.79, leakingRate=0.30)
 
 # util.trainESNWithMinimalTuning(size=1500,
 #                                featureTrainingVectors=featureTrainingVectors,

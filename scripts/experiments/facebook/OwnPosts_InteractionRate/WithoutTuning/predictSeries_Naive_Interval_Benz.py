@@ -8,7 +8,7 @@ import numpy as np
 # Dataset
 directoryName = "Datasets/"
 profileName = "Mercedes-Benz"
-datasetFileName = directoryName + profileName + "_time_interaction_rate.csv"
+datasetFileName = directoryName + profileName + "_time_interaction.csv"
 
 # Horizon - used to split the training and testing
 daysOfHorizon = 14 # 10 days ahead
