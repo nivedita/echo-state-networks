@@ -50,6 +50,10 @@ class ReservoirParameterTuner:
         else:
             self.reservoirWeightRandom = reservoirWeightMatrix
 
+        # Make the input and reservoir weight matrices read only - This is needed just to be safe (We do not need mutation of numpy arrays)
+        self.inputWeightRandom.flags.writeable = False
+        self.reservoirWeightRandom.flags.writeable = False
+
 
     def __reservoirTrain__(self, x):
 
@@ -87,7 +91,7 @@ class ReservoirParameterTuner:
         regressionError = errorFunction.compute(self.validationOutputData, predictedOutputData)
 
         #Return the error
-        print("\nThe Parameters: "+str(x)+" Regression error:"+str(regressionError))
+        #print("\nThe Parameters: "+str(x)+" Regression error:"+str(regressionError))
         return regressionError
 
     def __tune__(self):
@@ -231,7 +235,7 @@ class RandomConnectivityBruteTuner:
         reservoirConnectivity = float(x)
 
         # To get rid off the randomness in assigning weights, run it 10 times and  take the average error
-        times = 100
+        times = 10
         cumulativeError = 0
 
         for i in range(times):
