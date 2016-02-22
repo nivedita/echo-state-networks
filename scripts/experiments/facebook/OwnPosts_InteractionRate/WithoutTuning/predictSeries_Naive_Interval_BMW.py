@@ -39,7 +39,7 @@ trainingSeries, testingSeries = util.splitIntoTrainingAndTestingSeries(normalize
 featureIntervalList = []
 
 # # 24 hour interval
-period = 90
+period = 60
 for i in range(period, 0, -1):
     t = -24*i
     featureIntervalList.append(pd.Timedelta(hours=t))    # T
@@ -57,7 +57,7 @@ featureTrainingVectors = np.hstack((np.ones((featureTrainingVectors.shape[0], 1)
 networkSize = 2000
 util.trainESNWithoutTuning(size=networkSize, featureVectors=featureTrainingVectors, targetVectors=targetTrainingVectors,
                             initialTransient=50, inputConnectivity=1.0, reservoirConnectivity=0.3,
-                            inputScaling=0.5, reservoirScaling=0.5, spectralRadius=0.2, leakingRate=0.3)
+                            inputScaling=0.5, reservoirScaling=0.5, spectralRadius=0.79, leakingRate=0.26)
 
 
 # Step 8 - Predict the future
@@ -73,5 +73,5 @@ predictedSeries = util.descaleSeries(predictedSeries)
 
 # Step 10 - Plot the results
 details = profileName + "_yearsOfData_" + str(yearsOfData) + "_horizon_" + str(daysOfHorizon) +  "_network_size_" + str(networkSize)
-util.plotSeries("Outputs/Outputs_" + str(datetime.now()) + details,
+util.plotSeries("Outputs/Outputs_" + str(datetime.now().strftime("%Y_%m_%d_%H_%M_%S")) + details,
                 [actualSeries, predictedSeries], ["Actual Output", "Predicted Output"], "Facebook Own Posts Interaction Rate - "+profileName, "Interaction Rate")
