@@ -15,7 +15,7 @@ def _npRelu(np_features):
 
 class Reservoir:
     def __init__(self, size, spectralRadius, inputScaling, reservoirScaling, leakingRate, initialTransient,
-                 inputData, outputData, inputWeightRandom = None, reservoirWeightRandom = None,
+                 inputData, outputData, batchLearnRatio = 0.95, regFactor = 0.001, forgettingParameter = 0.999, inputWeightRandom = None, reservoirWeightRandom = None,
                  activationFunction=ActivationFunction.TANH, outputRelu = False):
         """
         :param Nx: size of the reservoir
@@ -33,6 +33,9 @@ class Reservoir:
         self.initialTransient = initialTransient
         self.inputData = inputData
         self.outputData = outputData
+        self.batchLearnRatio = batchLearnRatio
+        self.regFactor = regFactor
+        self.forgettingParameter = forgettingParameter
 
         # Initialize weights
         self.inputN, self.inputD = self.inputData.shape
@@ -72,7 +75,6 @@ class Reservoir:
             self.activation = _npRelu
 
         # Online Training related items
-        self.forgettingParameter = 0.999 # Means, entire error history is taken into account
         a = np.random.random_integers(900000, 999999) # Large value
         self.errorCovariance = a * np.identity(size)
 
@@ -99,14 +101,62 @@ class Reservoir:
         # Force spectral radius
         self.reservoirWeight = self.reservoirWeight * self.spectralRadius
 
-    # TODO: This is a candidate for gnumpy conversion
+
     def trainReservoir(self):
 
+        # Divide the training data into batch and online
+        nBatch = int(self.batchLearnRatio*self.inputN)
+        inputDataBatch = self.inputData[:nBatch]
+        outputDataBatch = self.outputData[:nBatch]
+        inputDataOnline = self.inputData[nBatch:]
+        outputDataOnline = self.outputData[nBatch:]
+
+        # Train batch and update the error covariance matrix
+        self.trainReservoirBatch(inputDataBatch, outputDataBatch)
+
+        # Train the rest of the points using incremental update
+        self.trainReservoirOnline(inputDataOnline, outputDataOnline)
+
+        # Reset the internal state
+        self.latestInternalState = np.zeros(self.Nx)
+
+    def trainReservoirBatch(self, inputData, outputData):
+
+        # Collect the reservoir states
+        inputN = inputData.shape[0]
+        internalStates = np.zeros((inputN-self.initialTransient, self.Nx))
         internalState = np.zeros(self.Nx)
+        for t in range(inputN):
+            term1 = np.dot(self.inputWeight, inputData[t])
+            term2 = np.dot(self.reservoirWeight,internalState)
+            internalState = (1.0-self.leakingRate)*internalState + self.leakingRate*self.activation(term1 + term2)
+            if t >= self.initialTransient:
+                internalStates[t-self.initialTransient] = internalState
+                self.latestInternalState = internalState
+
+        # # Solve for x in Ax = B
+        # A = internalStates
+        # for d in range(self.outputD):
+        #     B = outputData[self.initialTransient:, d]
+        #     self.outputWeight[:, d] = sla.lsmr(A, B, damp=1e-8)[0]
+
+        # Compute the error covariance matrix
+        self.errorCovariance = np.linalg.inv(np.dot(internalStates.T, internalStates) + self.regFactor * np.identity(self.Nx))
+
+        # Compute the output weights
+        self.outputWeight = np.dot(self.errorCovariance, np.dot(internalStates.T, outputData[self.initialTransient:]))
+
+    # TODO: This is a candidate for gnumpy conversion
+    def trainReservoirOnline(self, inputData, outputData):
+
+        internalState = self.latestInternalState
+
+        inputN = inputData.shape[0]
 
         # Compute internal states of the reservoir
-        for t in range(self.inputN):
-            term1 = np.dot(self.inputWeight,self.inputData[t])
+        for t in range(inputN):
+            print("Processing.."+str(t))
+            term1 = np.dot(self.inputWeight,inputData[t])
             term2 = np.dot(self.reservoirWeight,internalState)
             internalState = (1.0-self.leakingRate)*internalState + self.leakingRate*self.activation(term1 + term2)
             if t >= self.initialTransient:
@@ -115,7 +165,7 @@ class Reservoir:
                 output = np.dot(self.outputWeight.T, x)
 
                 # Error
-                error = self.outputData[t] - output
+                error = outputData[t] - output
 
                 # Innovation vector
                 innovationvector = np.dot(self.errorCovariance, x) / (np.dot(x.T, np.dot(self.errorCovariance, x)) + self.forgettingParameter)
@@ -125,6 +175,7 @@ class Reservoir:
 
                 # Update the error covariance
                 self.errorCovariance = (self.errorCovariance - np.dot(np.dot(innovationvector, x.T), self.errorCovariance)) / self.forgettingParameter
+
 
     # TODO: This is a candidate for gnumpy conversion
     def predict(self, testInputData):

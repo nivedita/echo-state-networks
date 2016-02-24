@@ -597,12 +597,11 @@ class SeriesUtility:
         predictedSeries = initialSeries[-horizon:]
         return predictedSeries
 
-    def getBestLeakingRate(self,featureIndices, featureVectors, targetVectors, availableSeries, validationSeries, networkParamaters):
+    def getBestLeakingRate(self,featureIndices, depth, featureVectors, targetVectors, availableSeries, validationSeries, networkParamaters):
         bestError = np.inf
         bestLeakingRate = None
         leakingRateRange = np.arange(0.1, 1.0, 0.1).tolist()
         errorFun = metrics.MeanSquareError()
-        depth = max(featureIndices)
         horizon = validationSeries.values.shape[0]
 
         for leakingRate in leakingRateRange:

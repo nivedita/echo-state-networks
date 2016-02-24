@@ -3,12 +3,7 @@ import scipy.linalg as la
 import scipy.sparse.linalg as sla
 from scipy.special import expit
 from enum import Enum
-
-class ActivationFunction(Enum):
-    TANH = 1
-    EXPIT = 2
-    ReLU = 3
-
+from reservoir import ActivationFunctions as act
 
 def _npRelu(np_features):
     return np.maximum(np_features, np.zeros(np_features.shape))
@@ -16,7 +11,7 @@ def _npRelu(np_features):
 class Reservoir:
     def __init__(self, size, spectralRadius, inputScaling, reservoirScaling, leakingRate, initialTransient,
                  inputData, outputData, inputWeightRandom = None, reservoirWeightRandom = None,
-                 activationFunction=ActivationFunction.TANH, outputRelu = False):
+                 reservoirActivationFunction=act.HyperbolicTangent, outputActivationFunction=act.ReLU):
         """
         :param Nx: size of the reservoir
         :param spectralRadius: spectral radius for reservoir weight matrix
@@ -64,7 +59,7 @@ class Reservoir:
         self.latestInternalState = np.zeros(self.Nx)
 
         # Activation Function
-        if activationFunction == ActivationFunction.TANH:
+        if activationFunction == None:
             self.activation = np.tanh
         elif activationFunction == ActivationFunction.EXPIT:
             self.activation = expit

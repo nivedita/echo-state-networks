@@ -17,7 +17,7 @@ networkParameters['arbitraryDepth'] = 24 * 60 # Depth of 1 year
 
 # Dataset
 directoryName = "Datasets/"
-profileName = "Jeep"
+profileName = "Ferrari"
 datasetFileName = directoryName + profileName + "_time_interaction_rate.csv"
 
 # Horizon - used to split the training and testing
@@ -55,14 +55,14 @@ bestDepth, bestFeaturesIndices, bestFeatures, targetVectors = util.getBestFeatur
 
 
 # Step 7 - Tune the leaking rate by brute force
-# optimalLeakingRate = util.getBestLeakingRate(bestFeaturesIndices, bestFeatures, targetVectors, trainingSeries,
-#                                              validationSeries, networkParameters)
+optimalLeakingRate = util.getBestLeakingRate(bestFeaturesIndices, bestDepth, bestFeatures, targetVectors, trainingSeries,
+                                             validationSeries, networkParameters)
 
 # Step 7 - Tune and Train the network
 util.trainESNWithoutTuning(size=networkParameters['size'], featureVectors=bestFeatures, targetVectors=targetVectors, initialTransient=networkParameters['initialTransient'],
                            inputConnectivity=networkParameters['inputConnectivity'], reservoirConnectivity=networkParameters['reservoirConnectivity'],
                            inputScaling=networkParameters['inputScaling'], reservoirScaling=networkParameters['reservoirScaling'],
-                           spectralRadius=networkParameters['spectralRadius'], leakingRate=networkParameters['leakingRate'])
+                           spectralRadius=networkParameters['spectralRadius'], leakingRate=optimalLeakingRate)
 
 
 # Step 8 - Predict the future
