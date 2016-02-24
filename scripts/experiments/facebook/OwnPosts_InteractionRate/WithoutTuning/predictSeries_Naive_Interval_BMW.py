@@ -23,7 +23,7 @@ resampledSeries = util.resampleSeriesSum(series, "H")
 del series
 
 # Step 3 - Filter recent data
-yearsOfData = 3
+yearsOfData = 1
 recentCount = yearsOfData * 365 * 24 + horizon
 filteredSeries = util.filterRecent(resampledSeries, recentCount)
 del resampledSeries
@@ -39,9 +39,9 @@ trainingSeries, testingSeries = util.splitIntoTrainingAndTestingSeries(normalize
 featureIntervalList = []
 
 # # 24 hour interval
-period = 60
+period = 24
 for i in range(period, 0, -1):
-    t = -24*i
+    t = -i
     featureIntervalList.append(pd.Timedelta(hours=t))    # T
 
 #featureIntervalList = util.getBestFeatures(trainingSeries, 0.30)
@@ -54,7 +54,7 @@ featureTrainingVectors = np.hstack((np.ones((featureTrainingVectors.shape[0], 1)
 
 
 # Step 7 - Train the network
-networkSize = 2000
+networkSize = int(featureTrainingVectors.shape[0]/10)
 util.trainESNWithoutTuning(size=networkSize, featureVectors=featureTrainingVectors, targetVectors=targetTrainingVectors,
                             initialTransient=50, inputConnectivity=1.0, reservoirConnectivity=0.3,
                             inputScaling=0.5, reservoirScaling=0.5, spectralRadius=0.79, leakingRate=0.26)

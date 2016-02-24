@@ -98,36 +98,71 @@ class Reservoir:
     # This is where the output weights are adapted in an online fashion
     def trainReservoir(self):
 
-        x_n = np.zeros((1, self.Nx))
+        # Start with output weight learnt using batch technique
+        batchRatio = 0.1
+        nBatch = int(batchRatio * self.inputN)
+        nOnline = self.inputN - nBatch
+        inputDataBatch = self.inputData[:nBatch]
+        outputDataBatch = self.outputData[:nBatch]
+        inputDataOnline = self.inputData[nBatch:]
+        outputDataOnline = self.outputData[nBatch:]
+        self.trainReservoirBatch(inputDataBatch, outputDataBatch)
 
-        adaptationRate = 0.0001
+        # Start with already excited reservoir
+        x_n = self.latestInternalState
 
+        # Adaptation Rate
+        adaptationRate = 0.001
 
         # Compute internal states of the reservoir
-        for t in range(self.inputN):
+        for t in range(nOnline):
             # Input vector u[n]
-            u_n = self.inputData[t].reshape((1, self.Nu))
-
+            u_n = inputDataOnline[t]
             # Reservoir internal state
-            term1 = np.dot(u_n, self.inputWeight.T)
-            term2 = np.dot(x_n, self.reservoirWeight)
+            term1 = np.dot(self.inputWeight, u_n)
+            term2 = np.dot(self.reservoirWeight, x_n)
             x_n = (1.0-self.leakingRate)*x_n + self.leakingRate*self.activation(term1 + term2)
 
-             # Expected output
-            d_n = self.outputData[t]
+            # Expected output
+            d_n = outputDataOnline[t]
 
             # Calculate the output of the network
             con = np.hstack((u_n, x_n))
-            y_n = np.dot(con, self.outputWeight.T)
+            y_n = np.dot(self.outputWeight, con)
 
             # Error
-            e_n = d_n - y_n
+            e_n = y_n - d_n
             print(e_n)
 
             # Adapt the output weights
-            correctionTerm = adaptationRate * np.dot(e_n.T, con)
+            correctionTerm = adaptationRate * np.dot(e_n.reshape((1,self.Ny)), con.reshape((1,con.shape[0])))
             self.outputWeight = self.outputWeight + correctionTerm
 
+        # After training, reset the reservoir state
+        self.latestInternalState = np.zeros(self.Nx)
+
+    def trainReservoirBatch(self, inputData, outputData):
+
+        inputN = inputData.shape[0]
+        self.internalState = np.zeros((inputN-self.initialTransient, self.Nx))
+        internalState = np.zeros(self.Nx)
+
+        # Compute internal states of the reservoir
+        for t in range(inputN):
+            term1 = np.dot(self.inputWeight, inputData[t])
+            term2 = np.dot(self.reservoirWeight,internalState)
+            internalState = (1.0-self.leakingRate)*internalState + self.leakingRate*self.activation(term1 + term2)
+            if t >= self.initialTransient:
+                self.internalState[t-self.initialTransient] = internalState
+                self.latestInternalState = internalState
+
+        # Learn the output weights
+        A = np.hstack((inputData[self.initialTransient:], self.internalState))
+
+        # Solve for x in Ax = B
+        for d in range(self.outputD):
+            B = outputData[self.initialTransient:, d]
+            self.outputWeight[d, :] = sla.lsmr(A, B, damp=1e-8)[0]
 
     # TODO: This is a candidate for gnumpy conversion
     def predict(self, testInputData):

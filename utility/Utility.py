@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 from timeseries import TimeSeriesContinuousProcessor as processor, TimeSeriesInterval as tsi
-from reservoir import onlineESN as esn, ReservoirTopology as topology
+from reservoir import classicESN as esn, ReservoirTopology as topology
 from sklearn import preprocessing as pp
 import os
 from plotting import OutputTimeSeries as plotting

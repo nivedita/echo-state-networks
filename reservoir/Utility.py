@@ -54,7 +54,7 @@ def predictFuture(network, seed, horizon):
         query.append(lastAvailableData)
 
         #Predict the next point
-        nextPoint = network.predictOnePoint(np.array(query).reshape((1,2)))[0]
+        nextPoint = network.predict(np.array(query).reshape((1,2)))[0]
         predictedTestOutputData.append(nextPoint)
 
         lastAvailableData = nextPoint
