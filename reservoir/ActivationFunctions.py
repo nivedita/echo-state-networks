@@ -6,8 +6,8 @@ class HyperbolicTangent(object):
         return np.tanh(x)
 
 
-class SigmoidFunction(object):
-    def __init__(self, beta):
+class LogisticFunction(object):
+    def __init__(self, beta=1.0):
         self.beta = beta
 
     def __call__(self, x):
@@ -16,4 +16,8 @@ class SigmoidFunction(object):
 
 class ReLU(object):
     def __call__(self, x):
-        np.maximum(x, np.zeros(x.shape))
+        return np.maximum(x, np.zeros(x.shape))
+
+class Linear(object):
+    def __call__(self, x):
+        return x

@@ -11,7 +11,7 @@ def _npRelu(np_features):
 class Reservoir:
     def __init__(self, size, spectralRadius, inputScaling, reservoirScaling, leakingRate, initialTransient,
                  inputData, outputData, inputWeightRandom = None, reservoirWeightRandom = None,
-                 reservoirActivationFunction=act.HyperbolicTangent, outputActivationFunction=act.ReLU):
+                 reservoirActivationFunction=act.HyperbolicTangent(), outputActivationFunction=act.Linear()):
         """
         :param Nx: size of the reservoir
         :param spectralRadius: spectral radius for reservoir weight matrix
@@ -47,9 +47,6 @@ class Reservoir:
         else:
             self.reservoirWeightRandom = np.copy(reservoirWeightRandom)
 
-        # Output Relu
-        self.relu = outputRelu
-
         # Generate the input and reservoir weights
         self.__generateInputWeight()
         self.__generateReservoirWeight()
@@ -58,13 +55,9 @@ class Reservoir:
         self.internalState = np.zeros((self.inputN-self.initialTransient, self.Nx))
         self.latestInternalState = np.zeros(self.Nx)
 
-        # Activation Function
-        if activationFunction == None:
-            self.activation = np.tanh
-        elif activationFunction == ActivationFunction.EXPIT:
-            self.activation = expit
-        elif activationFunction == ActivationFunction.ReLU:
-            self.activation = _npRelu
+        # Activation functions
+        self.reservoirActivation = reservoirActivationFunction
+        self.outputActivation = outputActivationFunction
 
 
     def __generateInputWeight(self):
@@ -98,7 +91,7 @@ class Reservoir:
         for t in range(self.inputN):
             term1 = np.dot(self.inputWeight,self.inputData[t])
             term2 = np.dot(self.reservoirWeight,internalState)
-            internalState = (1.0-self.leakingRate)*internalState + self.leakingRate*self.activation(term1 + term2)
+            internalState = (1.0-self.leakingRate)*internalState + self.leakingRate*self.reservoirActivation(term1 + term2)
             if t >= self.initialTransient:
                 self.internalState[t-self.initialTransient] = internalState
 
@@ -125,13 +118,10 @@ class Reservoir:
             # Reservoir activation
             term1 = np.dot(self.inputWeight,testInputData[t])
             term2 = np.dot(self.reservoirWeight,internalState)
-            internalState = (1-self.leakingRate)*internalState + self.leakingRate*self.activation(term1 + term2)
+            internalState = (1-self.leakingRate)*internalState + self.leakingRate*self.reservoirActivation(term1 + term2)
 
             # Output
-            output = np.dot(self.outputWeight, internalState)
-            # Apply Relu to output
-            if(self.relu):
-                output = _npRelu(output)
+            output = self.outputActivation(np.dot(self.outputWeight, internalState))
             testOutputData[t, :] = output
 
         # This is to preserve the internal state between multiple predict calls
@@ -143,11 +133,8 @@ class Reservoir:
     def predictOnePoint(self, testInput):
         term1 = np.dot(self.inputWeight,testInput[0])
         term2 = np.dot(self.reservoirWeight,self.latestInternalState)
-        self.latestInternalState = (1-self.leakingRate)*self.latestInternalState + self.leakingRate*self.activation(term1 + term2)
+        self.latestInternalState = (1-self.leakingRate)*self.latestInternalState + self.leakingRate*self.reservoirActivation(term1 + term2)
 
         # Output - Non-linearity applied through activation function
-        output = np.dot(self.outputWeight, self.latestInternalState)
-        # Apply Relu to output
-        if(self.relu):
-            output = _npRelu(output)
+        output = self.outputActivation(np.dot(self.outputWeight, self.latestInternalState))
         return output
