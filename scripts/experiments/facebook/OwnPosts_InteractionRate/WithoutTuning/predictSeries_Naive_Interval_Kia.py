@@ -7,7 +7,7 @@ import numpy as np
 
 # Dataset
 directoryName = "Datasets/"
-profileName = "Jeep"
+profileName = "Aston-Martin"
 datasetFileName = directoryName + profileName + "_time_interaction.csv"
 
 # Horizon - used to split the training and testing
@@ -39,24 +39,12 @@ trainingSeries, testingSeries = util.splitIntoTrainingAndTestingSeries(normalize
 featureIntervalList = []
 
 # # 24 hour interval
-period = 90
+period = 60
 for i in range(period, 0, -1):
-    t1 = -24*i
-    t2 = -24*i-1
-    t3 = -24*i+1
-    featureIntervalList.append(pd.Timedelta(hours=t1))
-    featureIntervalList.append(pd.Timedelta(hours=t2))
-    featureIntervalList.append(pd.Timedelta(hours=t3))
-    #featureIntervalList.append(pd.Timedelta(hours=t2))# T
-#     #featureIntervalList.append(pd.Timedelta(hours=t-1))  # T - 1
-#     #featureIntervalList.append(pd.Timedelta(hours=t+1))  # T +1
-# # Latest hours - last 72 hours
-# # period = 23
-# # for i in range(period, 0, -1):
-# #      featureIntervalList.append(pd.Timedelta(hours=-i))
+    t = -24*i
+    featureIntervalList.append(pd.Timedelta(hours=t))    # T
 
-#featureIntervalList = util.getBestFeatures(trainingSeries, 0.70)
-
+#featureIntervalList = util.getBestFeatures(trainingSeries, 0.30)
 
 targetIntervalList = [pd.Timedelta(hours=0)]
 
@@ -66,10 +54,11 @@ featureTrainingVectors = np.hstack((np.ones((featureTrainingVectors.shape[0], 1)
 
 
 # Step 7 - Train the network
-networkSize = 2000
+networkSize = int(featureTrainingVectors.shape[0]/10)
+#networkSize = 1000
 util.trainESNWithoutTuning(size=networkSize, featureVectors=featureTrainingVectors, targetVectors=targetTrainingVectors,
-                            initialTransient=50, inputConnectivity=0.7, reservoirConnectivity=0.1,
-                            inputScaling=0.5, reservoirScaling=0.5, spectralRadius=0.79, leakingRate=0.75)
+                            initialTransient=50, inputConnectivity=1.0, reservoirConnectivity=0.3,
+                            inputScaling=0.5, reservoirScaling=0.5, spectralRadius=0.79, leakingRate=0.26)
 
 
 # Step 8 - Predict the future
@@ -85,5 +74,5 @@ predictedSeries = util.descaleSeries(predictedSeries)
 
 # Step 10 - Plot the results
 details = profileName + "_yearsOfData_" + str(yearsOfData) + "_horizon_" + str(daysOfHorizon) +  "_network_size_" + str(networkSize)
-util.plotSeries("Outputs/Outputs_" + str(datetime.now()) + details,
+util.plotSeries("Outputs/Outputs_" + str(datetime.now().strftime("%Y_%m_%d_%H_%M_%S")) + details,
                 [actualSeries, predictedSeries], ["Actual Output", "Predicted Output"], "Facebook Own Posts Interaction Rate - "+profileName, "Interaction Rate")
