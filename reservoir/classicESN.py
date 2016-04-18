@@ -82,18 +82,28 @@ class Reservoir:
         # Force spectral radius
         self.reservoirWeight = self.reservoirWeight * self.spectralRadius
 
-    # TODO: This is a candidate for gnumpy conversion
-    def trainReservoir(self):
+    def collectInternalStates(self, inputData):
+
+        inputN = inputData.shape[0]
 
         internalState = np.zeros(self.Nx)
 
+        internalStates = np.zeros((inputN-self.initialTransient, self.Nx))
+
         # Compute internal states of the reservoir
-        for t in range(self.inputN):
-            term1 = np.dot(self.inputWeight,self.inputData[t])
+        for t in range(inputN):
+            term1 = np.dot(self.inputWeight,inputData[t])
             term2 = np.dot(self.reservoirWeight,internalState)
             internalState = (1.0-self.leakingRate)*internalState + self.leakingRate*self.reservoirActivation(term1 + term2)
             if t >= self.initialTransient:
-                self.internalState[t-self.initialTransient] = internalState
+                internalStates[t-self.initialTransient] = internalState
+        return internalStates
+
+    # TODO: This is a candidate for gnumpy conversion
+    def trainReservoir(self):
+
+        # Collect internal states
+        self.internalState = self.collectInternalStates(self.inputData)
 
         # Learn the output weights
         A = self.internalState

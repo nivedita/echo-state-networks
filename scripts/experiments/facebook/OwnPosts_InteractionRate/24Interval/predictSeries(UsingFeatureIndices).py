@@ -6,11 +6,11 @@ import numpy as np
 
 # Dataset
 directoryName = "Datasets/"
-profileName = "BMW"
+profileName = "Mercedes-Benz"
 datasetFileName = directoryName + profileName + "_time_interaction.csv"
 
 # Horizon - used to split the training and testing
-daysOfHorizon = 28 # 10 days ahead
+daysOfHorizon = 14 # 10 days ahead
 horizon = 24*daysOfHorizon
 util = Utility.SeriesUtility()
 
@@ -36,7 +36,7 @@ trainingSeries, testingSeries = util.splitIntoTrainingAndTestingSeries(normalize
 
 # Step 6 - Form the feature and target vectors for training
 featureIndices = []
-numberOfDays = 60
+numberOfDays = 30
 interval = 24
 arbitraryDepth = numberOfDays * interval
 for i in range(numberOfDays - 1):
@@ -52,13 +52,13 @@ featureVectors = np.hstack((np.ones((featureVectors.shape[0], 1)),featureVectors
 # Step 7 - Train the network
 networkSize = int(featureVectors.shape[0]/10)
 util.trainESNWithoutTuning(size=networkSize, featureVectors=featureVectors, targetVectors=targetVectors,
-                            initialTransient=50, inputConnectivity=1.0, reservoirConnectivity=0.1,
-                            inputScaling=0.5, reservoirScaling=0.5, spectralRadius=0.79, leakingRate=0.30,
+                            initialTransient=50, inputConnectivity=0.7, reservoirConnectivity=0.7,
+                            inputScaling=0.5, reservoirScaling=0.5, spectralRadius=0.79, leakingRate=0.3,
                             learningMethod=Utility.LearningMethod.Batch)
 
 
 # Step 8 - Predict the future
-predictedSeries = util.predict(util.esn, trainingSeries, arbitraryDepth, horizon, featureIndices)
+predictedSeries = util.predictI(util.esn, trainingSeries, arbitraryDepth, horizon, featureIndices)
 
 
 # Step 9 - De-scale the series

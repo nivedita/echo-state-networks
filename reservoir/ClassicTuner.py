@@ -4,7 +4,9 @@ from performance import ErrorMetrics as rmse
 import numpy as np
 
 class ReservoirTuner:
-    def __init__(self, size, initialTransient, trainingInputData, trainingOutputData, validationInputData, validationOutputData, spectralRadiusBound, inputScalingBound, reservoirScalingBound, leakingRateBound):
+    def __init__(self, size, initialTransient, trainingInputData, trainingOutputData, validationInputData, validationOutputData,
+                 spectralRadiusBound=(0.0,1.0), inputScalingBound=(0.0,1.0),
+                 reservoirScalingBound=(0.0,1.0), leakingRateBound=(0.0,1.0)):
         self.size = size
         self.initialTransient = initialTransient
         self.trainingInputData = trainingInputData

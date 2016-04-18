@@ -34,16 +34,18 @@ del filteredSeries
 
 data = normalizedSeries.values.flatten()
 
-cumChange = 0.0
+cumRate = 0.0
 numChanges = 0
 for i in range(1, data.shape[0]):
 
     previousValue = data[i-1]
     currentValue = data[i]
     change= abs(currentValue - previousValue)
-    if(change > 0.0):
+    if(change > 0.0 and previousValue != 0.0):
+        rate = change/previousValue
+        cumRate += rate
         numChanges = numChanges + 1
-    cumChange += change
 
-leakingRate = cumChange/ numChanges
+
+leakingRate = cumRate/ numChanges
 print(leakingRate)

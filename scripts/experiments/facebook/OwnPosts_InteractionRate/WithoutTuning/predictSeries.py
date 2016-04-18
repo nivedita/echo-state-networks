@@ -6,11 +6,11 @@ from performance import ErrorMetrics as metrics
 
 #Get the commamd line arguments
 directoryName = "Datasets/"
-profileName = sys.argv[1]
-datasetFileName = directoryName + profileName + "_time_interaction_rate.csv"
+profileName = "Ferrari"
+datasetFileName = directoryName + profileName + "_time_interaction.csv"
 
 daysOfHorizon = 10
-daysOfDepth = 7
+daysOfDepth = 30
 horizon = 24*daysOfHorizon#7 days ahead
 depth = 24*daysOfDepth #30 days
 util = Utility.SeriesUtility()
@@ -22,10 +22,8 @@ series = util.convertDatasetsToSeries(datasetFileName)
 resampledSeries = util.resampleSeriesSum(series, "H")
 del series
 
-
-
 # Todo - Train based on the recent data only.
-yearsOfData = 5
+yearsOfData = 3
 recentCount = yearsOfData * 365 * 24 + horizon
 filteredSeries = util.filterRecent(resampledSeries, recentCount)
 del resampledSeries
@@ -34,7 +32,6 @@ del resampledSeries
 # # Step 3 - Scale the series
 normalizedSeries = util.scaleSeries(filteredSeries)
 del filteredSeries
-#normalizedSeries = filteredSeries
 
 # Step 4 - Split into training and testing
 trainingSeries, testingSeries = util.splitIntoTrainingAndTestingSeries(normalizedSeries,horizon)
@@ -46,15 +43,8 @@ featureTrainingVectors, targetTrainingVectors = util.formContinousFeatureAndTarg
 # Step 6 - Train the network
 networkSize = 2000
 util.trainESNWithoutTuning(size=networkSize, featureVectors=featureTrainingVectors, targetVectors=targetTrainingVectors,
-                            initialTransient=50, inputConnectivity=1.0, reservoirConnectivity=0.1,
-                            inputScaling=0.5, reservoirScaling=0.5, spectralRadius=0.79, leakingRate=0.30)
-
-# util.trainESNWithMinimalTuning(size=1500,
-#                                featureTrainingVectors=featureTrainingVectors,
-#                                targetTrainingVectors=targetTrainingVectors,
-#                                featureValidationVectors=featureValidationVectors,
-#                                targetValidationVectors=targetValidationVectors,
-#                                initialTransient=50)
+                            initialTransient=50, inputConnectivity=1.0, reservoirConnectivity=1.0,
+                            inputScaling=0.0, reservoirScaling=0.0, spectralRadius=0.79, leakingRate=0.30)
 
 # Step 7 - Predict the future
 predictedSeries = util.predictFuture(trainingSeries, depth, horizon)
@@ -63,7 +53,6 @@ predictedSeries = util.predictFuture(trainingSeries, depth, horizon)
 # # Step 8 - De-scale the series
 actualSeries = util.descaleSeries(testingSeries)
 predictedSeries = util.descaleSeries(predictedSeries)
-#actualSeries = testingSeries
 
 error = metrics.MeanSquareError()
 regressionError = error.compute(testingSeries.values, predictedSeries.values)

@@ -1,10 +1,10 @@
 import pandas as pd
 import numpy as np
 from timeseries import TimeSeriesContinuousProcessor as processor, TimeSeriesInterval as tsi
-from reservoir import classicESN as esn, ReservoirTopology as topology
+from reservoir import classicESN as esn, onlineESNWithRLS as onlineESN, ReservoirTopology as topology, ActivationFunctions as act
 from sklearn import preprocessing as pp
 import os
-from plotting import OutputTimeSeries as plotting
+from plotting import OutputTimeSeries as plotting, LineBarCombinationPlot as combPlotting
 # from reservoir import Tuner as tuner
 from performance import ErrorMetrics as metrics
 from enum import Enum
@@ -21,6 +21,10 @@ class Minimizer(Enum):
 class FeatureSelectionMethod:
     CutOff_Threshold = 1
     Pattern_Analysis = 2
+
+class LearningMethod:
+    Batch = 1
+    Online = 2
 
 class ParameterStep(object):
     def __init__(self, stepsize=0.005):
@@ -141,6 +145,108 @@ class ReservoirParameterTuner:
     def getOptimalParameters(self):
         return self.__tune__()
 
+class CorrelationBruteTuner:
+    def __init__(self, size, initialTransient, trainingSeries, featureVectors, targetVectors, correlationCoefficients,
+                 validationSeries, arbitraryDepth,
+                 reservoirActivationFunction, outputActivationFunction,
+                 inputConnMatrix, reservoirWeightMatrix,
+                 spectralRadius=0.79, inputScaling=0.0, reservoirScaling=0.0
+                 ):
+        self.size = size
+        self.initialTransient = initialTransient
+        self.util = SeriesUtility()
+        self.trainingSeries = trainingSeries
+        self.trainingInputData = featureVectors
+        self.trainingOutputData = targetVectors
+        self.validationSeries = validationSeries
+        self.horizon = self.validationSeries.values.shape[0]
+        self.correlationCoefficients = correlationCoefficients
+        self.depth = arbitraryDepth
+        self.reservoirActivationFunction = reservoirActivationFunction
+        self.outputActivationFunction = outputActivationFunction
+        self.inputConnMatrix = inputConnMatrix
+        self.reservoirWeightMatrix = reservoirWeightMatrix
+
+        # Input-to-reservoir is of Classic Type - Fully connected and maintained as constant
+        self.inputN, self.inputD = self.trainingInputData.shape
+
+        # Other reservoir parameters are also kept constant
+        self.spectralRadius = spectralRadius
+        self.inputScaling = inputScaling
+        self.reservoirScaling = reservoirScaling
+
+        # Scaling and leaking rate range
+        self.ranges = (slice(0.0, 1.10, 0.25), slice(0.3,1.0,0.2))
+
+
+    def predict(self, network, availableSeries, arbitraryDepth, horizon):
+        # To avoid mutation of pandas series
+        initialSeries = pd.Series(data=availableSeries.values, index=availableSeries.index)
+        for i in range(horizon):
+            feature = initialSeries.values[-arbitraryDepth:].reshape((1, arbitraryDepth))
+
+            # Append bias
+            feature = np.hstack((1.0,feature[0, :])).reshape((1, feature.shape[1]+1))
+
+            nextPoint = network.predictOnePoint(feature)[0]
+
+            nextIndex = initialSeries.last_valid_index() + pd.Timedelta(hours=1)
+            initialSeries[nextIndex] = nextPoint
+
+        predictedSeries = initialSeries[-horizon:]
+        return predictedSeries
+
+    def __reservoirTrain__(self, x):
+
+        # Extract the parameters
+        correlationScaling = float(x[0])
+        leakingRate = float(x[1])
+
+        correlationMatrix = self.util.getScaleCorrelationMatrix(self.correlationCoefficients, correlationScaling,
+                                                                self.inputD, self.size)
+
+        inputWeightMatrix = self.inputConnMatrix * correlationMatrix
+
+        #Create the reservoir
+        res = esn.Reservoir(size=self.size,
+                            spectralRadius=self.spectralRadius,
+                            inputScaling=self.inputScaling,
+                            reservoirScaling=self.reservoirScaling,
+                            leakingRate=leakingRate,
+                            initialTransient=self.initialTransient,
+                            inputData=self.trainingInputData,
+                            outputData=self.trainingOutputData,
+                            inputWeightRandom=inputWeightMatrix,
+                            reservoirWeightRandom=self.reservoirWeightMatrix,
+                            reservoirActivationFunction=self.reservoirActivationFunction,
+                            outputActivationFunction=self.outputActivationFunction)
+
+        # Train the reservoir
+        res.trainReservoir()
+
+        # Warm up
+        predictedTrainingOutputData = res.predict(self.trainingInputData[-self.initialTransient:])
+
+        # Predict for the validation data
+        predictedSeries = self.predict(res, self.trainingSeries, self.depth, self.horizon)
+
+        gc.collect()
+
+        # Calcuate the regression error
+        errorFunction = metrics.MeanSquareError()
+        error = errorFunction.compute(self.validationSeries.values, predictedSeries.values)
+
+        #Return the error
+        print("\nThe Parameters: "+str(x)+" Regression error:"+str(error))
+        return error
+
+    def __tune__(self):
+        result = optimize.brute(self.__reservoirTrain__,ranges=self.ranges, finish=None, full_output=True)
+        return result[0]
+
+    def getOptimalParameters(self):
+        return self.__tune__()
+
 class SeriesUtility:
     def __init__(self):
         self.esn = None
@@ -178,6 +284,12 @@ class SeriesUtility:
         else:
             return 1
 
+    def _binary(self, x):
+        if len(x) == 0:
+            return -1
+        else:
+            return +1
+
     def _mean(self, x):
         if len(x) == 0:
             return 0
@@ -190,12 +302,25 @@ class SeriesUtility:
     def resampleSeriesSum(self, series, samplingRule):
         return series.resample(rule=samplingRule, how=self._sum)
 
+    def resampleSeriesBinary(self, series, samplingRule):
+        return series.resample(rule=samplingRule, how=self._binary)
+
     def resampleSeriesMean(self, series, samplingRule):
         return series.resample(rule=samplingRule, how=self._mean)
 
     def scaleSeries(self, series):
         self.scalingFunction = pp.MinMaxScaler((0,1))
+        #self.scalingFunction = pp.MinMaxScaler((-1,1))
         #self.scalingFunction = pp.StandardScaler()
+        data = series.values
+        data = self.scalingFunction.fit_transform(data)
+        scaledSeries = pd.Series(data=data,index=series.index)
+        return scaledSeries
+
+    def scaleSeriesStandard(self, series):
+        #self.scalingFunction = pp.MinMaxScaler((0,1))
+        #self.scalingFunction = pp.MinMaxScaler((-1,1))
+        self.scalingFunction = pp.StandardScaler()
         data = series.values
         data = self.scalingFunction.fit_transform(data)
         scaledSeries = pd.Series(data=data,index=series.index)
@@ -297,13 +422,167 @@ class SeriesUtility:
 
     def trainESNWithoutTuning(self, size, featureVectors, targetVectors, initialTransient,
                               inputConnectivity=0.7, reservoirConnectivity=0.1, inputScaling=0.5,
-                              reservoirScaling=0.5, spectralRadius=0.79, leakingRate=0.3):
+                              reservoirScaling=0.5, spectralRadius=0.79, leakingRate=0.3, learningMethod=LearningMethod.Batch,
+                              reservoirActivationFunction = act.LogisticFunction(),
+                              outputActivationFunction = act.ReLU()):
 
 
         inputWeightMatrix = topology.RandomInputTopology(inputSize=featureVectors.shape[1], reservoirSize=size, inputConnectivity=inputConnectivity).generateWeightMatrix()
         reservoirWeightMatrix = topology.RandomReservoirTopology(size=size, connectivity=reservoirConnectivity).generateWeightMatrix()
 
-        network = esn.Reservoir(size=size,
+        if(learningMethod == LearningMethod.Batch):
+
+            network = esn.Reservoir(size=size,
+                                    spectralRadius=spectralRadius,
+                                    inputScaling=inputScaling,
+                                    reservoirScaling=reservoirScaling,
+                                    leakingRate=leakingRate,
+                                    initialTransient=initialTransient,
+                                    inputData=featureVectors,
+                                    outputData=targetVectors,
+                                    inputWeightRandom=inputWeightMatrix,
+                                    reservoirWeightRandom=reservoirWeightMatrix,
+                                    reservoirActivationFunction=reservoirActivationFunction,
+                                    outputActivationFunction=outputActivationFunction)
+        else:
+             network = onlineESN.Reservoir(size=size,
+                                    spectralRadius=spectralRadius,
+                                    inputScaling=inputScaling,
+                                    reservoirScaling=reservoirScaling,
+                                    leakingRate=leakingRate,
+                                    initialTransient=initialTransient,
+                                    inputData=featureVectors,
+                                    outputData=targetVectors,
+                                    inputWeightRandom=inputWeightMatrix,
+                                    reservoirWeightRandom=reservoirWeightMatrix,
+                                    reservoirActivationFunction=reservoirActivationFunction,
+                                    outputActivationFunction=outputActivationFunction,
+                                    batchLearnRatio=0.99)
+
+        network.trainReservoir()
+
+        # Warm-up the network
+        trainingPredictedOutputData = network.predict(featureVectors[-initialTransient:])
+
+        # Store it and it will be used in the predictFuture method
+        self.esn = network
+
+    def getCorrelationMatrix(self, featureVectors, targetVectors, reservoirSize):
+
+        # Ignore the bias
+        inputSize = featureVectors.shape[1] -1
+        correlationCoefficient = self.getCorrelationCoefficients(featureVectors[:, 1:], targetVectors)
+
+        correlationMatrix = [np.random.rand(1,reservoirSize)]
+        for i in range(inputSize):
+            correlation = correlationCoefficient[0,i]
+            correlationMatrix.append(np.ones((1, reservoirSize)) * correlation)
+        correlationMatrix = np.array(correlationMatrix).reshape((inputSize+1, reservoirSize)).T
+        return correlationMatrix
+
+    def getRawCorrelationCoefficients(self, featureVectors, targetVectors):
+        correlations = []
+        y = targetVectors[:, 0]
+        # For each feature vector, calculate the correlation coefficient
+        for i in range(featureVectors.shape[1]):
+            x = featureVectors[:, i]
+            correlation, p_value = spearmanr(x,y)
+            correlations.append(correlation)
+
+        correlations = np.array(correlations)
+        return correlations
+
+    def getScaleCorrelationMatrix(self, correlations, scaling, inputSize, reservoirSize):
+
+        # Scale the correlation coefficients
+        inputSize = inputSize - 1
+
+        if(scaling != 0.0):
+            scaler = pp.MinMaxScaler((-scaling,scaling))
+            correlations = scaler.fit_transform(correlations)
+        correlations = correlations.reshape((1, inputSize))
+
+        correlationMatrix = [np.random.rand(1,reservoirSize)]
+        for i in range(inputSize):
+            correlation = correlations[0,i]
+            correlationMatrix.append(np.ones((1, reservoirSize)) * correlation)
+        correlationMatrix = np.array(correlationMatrix).reshape((inputSize+1, reservoirSize)).T
+        return correlationMatrix
+
+
+
+    def trainESNWithoutTuningCorrelated(self, size, featureVectors, targetVectors, initialTransient,
+                              inputConnectivity=0.7, reservoirConnectivity=0.1, inputScaling=0.5,
+                              reservoirScaling=0.5, spectralRadius=0.79, leakingRate=0.2,
+                              reservoirActivationFunction = act.LogisticFunction(),
+                              outputActivationFunction = act.ReLU(),
+                              learningMethod=LearningMethod.Batch,
+                              correlatedScaling = 1.0):
+
+        # Here, instead of assigning random input weights, assign the correlation as weights
+        inputConnMatrix = topology.RandomInputTopology(inputSize=featureVectors.shape[1], reservoirSize=size, inputConnectivity=inputConnectivity).generateConnectivityMatrix()
+        correlationMatrix = self.getCorrelationMatrix(featureVectors, targetVectors, size)
+        inputWeightMatrix = inputConnMatrix * correlationMatrix
+
+        reservoirWeightMatrix = topology.RandomReservoirTopology(size=size, connectivity=reservoirConnectivity).generateWeightMatrix()
+
+        #reservoirWeightMatrix = topology.SmallWorldGraphs(size=size, meanDegree=int(size/2), beta=0.3).generateWeightMatrix()
+
+        #reservoirWeightMatrix = topology.ScaleFreeNetworks(size=size, attachmentCount=int(size/2)).generateWeightMatrix()
+
+
+        if(learningMethod == LearningMethod.Batch):
+
+            network = esn.Reservoir(size=size,
+                                    spectralRadius=spectralRadius,
+                                    inputScaling=inputScaling,
+                                    reservoirScaling=reservoirScaling,
+                                    leakingRate=leakingRate,
+                                    initialTransient=initialTransient,
+                                    inputData=featureVectors,
+                                    outputData=targetVectors,
+                                    inputWeightRandom=inputWeightMatrix,
+                                    reservoirWeightRandom=reservoirWeightMatrix,
+                                    reservoirActivationFunction=reservoirActivationFunction,
+                                    outputActivationFunction=outputActivationFunction)
+        else:
+             network = onlineESN.Reservoir(size=size,
+                                    spectralRadius=spectralRadius,
+                                    inputScaling=inputScaling,
+                                    reservoirScaling=reservoirScaling,
+                                    leakingRate=leakingRate,
+                                    initialTransient=initialTransient,
+                                    inputData=featureVectors,
+                                    outputData=targetVectors,
+                                    inputWeightRandom=inputWeightMatrix,
+                                    reservoirWeightRandom=reservoirWeightMatrix,
+                                    reservoirActivationFunction=reservoirActivationFunction,
+                                    outputActivationFunction=outputActivationFunction,
+                                    batchLearnRatio=0.99)
+
+        network.trainReservoir()
+
+        # Warm-up the network
+        trainingPredictedOutputData = network.predict(featureVectors[-initialTransient:])
+
+        # Store it and it will be used in the predictFuture method
+        self.esn = network
+
+
+    def tuneLeakingRate(self, size, featureVectors, targetVectors, trainingSeries, validationSeries, initialTransient, depth, inputWeightMatrix, reservoirWeightMatrix,
+                        reservoirActivationFunction, outputActivationFunction,
+                        inputScaling=0.0, reservoirScaling=0.0, spectralRadius=0.79):
+
+        # Now, tune the leaking rate to the optimal
+        bestLeakingRate = None
+        bestError = np.inf
+        leakingRateList = np.arange(0.1, 1.0, 0.1)
+        horizon = validationSeries.values.shape[0]
+
+
+        for leakingRate in leakingRateList:
+            # Create the reservoir
+            res = esn.Reservoir(size=size,
                                 spectralRadius=spectralRadius,
                                 inputScaling=inputScaling,
                                 reservoirScaling=reservoirScaling,
@@ -313,16 +592,109 @@ class SeriesUtility:
                                 outputData=targetVectors,
                                 inputWeightRandom=inputWeightMatrix,
                                 reservoirWeightRandom=reservoirWeightMatrix,
-                                activationFunction=esn.ActivationFunction.EXPIT,
-                                outputRelu=True)
+                                reservoirActivationFunction=reservoirActivationFunction,
+                                outputActivationFunction=outputActivationFunction)
+
+            # Train the reservoir
+            res.trainReservoir()
+
+            # Warm up
+            predictedTrainingOutputData = res.predict(featureVectors[-initialTransient:])
+
+            # Predict for the validation data
+            predictedSeries = self.predict(res, trainingSeries, depth, horizon)
+
+            gc.collect()
+
+            # Calcuate the regression error
+            errorFunction = metrics.RootMeanSquareError()
+            error = errorFunction.compute(validationSeries.values, predictedSeries.values)
+
+            print("Leaking rate: "+str(leakingRate)+" Error: "+str(error))
+
+            if(error < bestError):
+                bestError = error
+                bestLeakingRate = leakingRate
+
+        return bestLeakingRate
+
+
+    def trainESNWithCorrelationTuned(self, size, trainingSeries, validationSeries, availableSeries,
+                                     initialTransient, depth, inputConnectivity=0.7, reservoirConnectivity=0.3,
+                                     inputScaling=0.0,
+                              reservoirScaling=0.5, spectralRadius=0.79, leakingRate=0.3,
+                              reservoirActivationFunction = act.LogisticFunction(),
+                              outputActivationFunction = act.ReLU()):
+
+        # Form the feature and target vectors
+        trainingInputData, trainingOutputData = self.formContinousFeatureAndTargetVectors(trainingSeries, depth)
+        correlationCoefficients = self.getRawCorrelationCoefficients(trainingInputData[:, 1:], trainingOutputData)
+        correlationMatrix = self.getScaleCorrelationMatrix(correlationCoefficients, scaling=0.0, inputSize=trainingInputData.shape[1], reservoirSize=size)
+
+        # Input Conn Matrix and Reservoir weight matrix
+        inputConnMatrix = topology.RandomInputTopology(inputSize=trainingInputData.shape[1], reservoirSize=size, inputConnectivity=inputConnectivity).generateConnectivityMatrix()
+        inputWeightMatrix = inputConnMatrix * correlationMatrix
+        reservoirWeightMatrix = topology.RandomReservoirTopology(size=size, connectivity=reservoirConnectivity).generateWeightMatrix()
+
+        print("Tuning the leaking rate..")
+
+        # # Tune the leaking rate
+        # bestLeakingRate = self.tuneLeakingRate(size=size, featureVectors=trainingInputData, targetVectors=trainingOutputData, trainingSeries=trainingSeries, validationSeries=validationSeries,
+        #                                        initialTransient=initialTransient, depth=depth, inputWeightMatrix=inputWeightMatrix, reservoirWeightMatrix=reservoirWeightMatrix,
+        #                                        reservoirActivationFunction=reservoirActivationFunction, outputActivationFunction=outputActivationFunction)
+        #
+        # print("Optimal leaking rate:"+str(bestLeakingRate))
+        #
+        # print("Tuning the input scaling..")
+
+        correlationTuner = CorrelationBruteTuner(size=size,
+                                                 initialTransient=initialTransient,
+                                                 trainingSeries=trainingSeries,
+                                                 validationSeries=validationSeries,
+                                                 arbitraryDepth=depth,
+                                                 reservoirActivationFunction = reservoirActivationFunction,
+                                                 outputActivationFunction=outputActivationFunction,
+                                                 featureVectors=trainingInputData,
+                                                 targetVectors=trainingOutputData,
+                                                 correlationCoefficients=correlationCoefficients,
+                                                 inputConnMatrix=inputConnMatrix,
+                                                 reservoirWeightMatrix=reservoirWeightMatrix
+                                                 )
+
+        correlationScalingOptimum, leakingRateOptimum = correlationTuner.getOptimalParameters()
+        print("Optimal leaking rate.."+str(leakingRateOptimum))
+        print("Optimal scaling.."+str(correlationScalingOptimum))
+
+        # Input weight matrix
+        correlationMatrix = self.getScaleCorrelationMatrix(correlationCoefficients, correlationScalingOptimum,
+                                                           trainingInputData.shape[1], size)
+        inputWeightMatrix = inputConnMatrix * correlationMatrix
+
+
+
+        # Train and save the network with optimal parameters
+        network = esn.Reservoir(size=size,
+                                spectralRadius=spectralRadius,
+                                inputScaling=inputScaling,
+                                reservoirScaling=reservoirScaling,
+                                leakingRate=leakingRateOptimum,
+                                initialTransient=initialTransient,
+                                inputData=trainingInputData,
+                                outputData=trainingOutputData,
+                                inputWeightRandom=inputWeightMatrix,
+                                reservoirWeightRandom=reservoirWeightMatrix,
+                                reservoirActivationFunction=reservoirActivationFunction,
+                                outputActivationFunction=outputActivationFunction)
+
 
         network.trainReservoir()
 
         # Warm-up the network
-        trainingPredictedOutputData = network.predict(featureVectors[-initialTransient:])
+        trainingPredictedOutputData = network.predict(trainingInputData[-initialTransient:])
 
         # Store it and it will be used in the predictFuture method
         self.esn = network
+
 
     def trainESNWithTuning(self, size, featureVectors, targetVectors, initialTransient,
                        initialSeedSeries, validationOutputData, arbitraryDepth, featureIndices,
@@ -365,6 +737,41 @@ class SeriesUtility:
         self.esn = network
 
 
+    def predict(self, network, availableSeries, arbitraryDepth, horizon):
+        # To avoid mutation of pandas series
+        initialSeries = pd.Series(data=availableSeries.values, index=availableSeries.index)
+        for i in range(horizon):
+            feature = initialSeries.values[-arbitraryDepth:].reshape((1, arbitraryDepth))
+
+            # Append bias
+            feature = np.hstack((1.0,feature[0, :])).reshape((1, feature.shape[1]+1))
+
+            nextPoint = network.predictOnePoint(feature)[0]
+
+            nextIndex = initialSeries.last_valid_index() + pd.Timedelta(hours=1)
+            initialSeries[nextIndex] = nextPoint
+
+        predictedSeries = initialSeries[-horizon:]
+        return predictedSeries
+
+    def predictFutureDays(self, network, availableSeries, arbitraryDepth, horizon):
+        # To avoid mutation of pandas series
+        initialSeries = pd.Series(data=availableSeries.values, index=availableSeries.index)
+        for i in range(horizon):
+            feature = initialSeries.values[-arbitraryDepth:].reshape((1, arbitraryDepth))
+
+            # Append bias
+            feature = np.hstack((1.0,feature[0, :])).reshape((1, feature.shape[1]+1))
+
+            nextPoint = network.predictOnePoint(feature)[0]
+
+            nextIndex = initialSeries.last_valid_index() + pd.Timedelta(days=1)
+            initialSeries[nextIndex] = nextPoint
+
+        predictedSeries = initialSeries[-horizon:]
+        return predictedSeries
+
+
 
     def predictFuture(self, availableSeries, depth, horizon):
 
@@ -383,12 +790,46 @@ class SeriesUtility:
 
             #Form the feature vectors
             feature = [1.0]
+            #feature = []
             for interval in featureIntervalList:
                 feature.append(availableSeries[nextValue + interval])
 
             feature = np.array(feature).reshape((1,len(featureIntervalList)+1))
 
-            predictedValue = self.esn.predict(feature)[0,0]
+            predictedValue = self.esn.predictOnePoint(feature)[0]
+
+            # Add to the future list
+            futureSeries[nextValue] = predictedValue
+
+            # Add it to the series
+            availableSeries[nextValue] = predictedValue
+
+        return futureSeries
+
+    def predictFutureFeatureTransformer(self, esn, availableSeries, depth, horizon):
+
+        # future series
+        futureSeries = pd.Series()
+
+        # Feature list
+        featureIntervalList = []
+        for i in range(depth, 0, -1):
+            interval = pd.Timedelta(hours=-(i))
+            featureIntervalList.append(interval)
+
+        nextValue = availableSeries.last_valid_index()
+        for i in range(horizon):
+            nextValue = nextValue + pd.Timedelta(hours=1)
+
+            #Form the feature vectors
+            #feature = [1.0]
+            feature = []
+            for interval in featureIntervalList:
+                feature.append(availableSeries[nextValue + interval])
+
+            feature = np.array(feature).reshape((1,len(featureIntervalList)))
+
+            predictedValue = esn.predictOnePoint(feature)[0,0]
 
             # Add to the future list
             futureSeries[nextValue] = predictedValue
@@ -483,6 +924,24 @@ class SeriesUtility:
             outplot.setSeries(seriesNameList[i], np.array(xAxis), series.values)
         outplot.createOutput()
 
+    def plotCombinedSeries(self, folderName, seriesList, seriesNameList, title, subTitle, yAxisText, fileName="Prediction.html"):
+        os.mkdir(folderName)
+        outplot = combPlotting.TimeSeriesLineBarPlot(folderName + "/" + fileName, title, subTitle, yAxisText)
+
+        for i in range(len(seriesList)):
+            series = seriesList[i]
+            xAxis = []
+            for index, value in series.iteritems():
+                year = index.strftime("%Y")
+                month = index.strftime("%m")
+                day = index.strftime("%d")
+                hour = index.strftime("%H")
+                nextDayStr = "Date.UTC(" + str(year)+","+ str(int(month)-1) + "," + str(day) + ","+ str(hour)+")"
+                xAxis.append(nextDayStr)
+
+            outplot.setSeries(seriesNameList[i], np.array(xAxis), series.values)
+        outplot.createOutput()
+
     def filterRecent(self, series, count):
         data = series.values[-count:]
         index = series.index[-count:]
@@ -524,12 +983,25 @@ class SeriesUtility:
             x = featureVectors[:, i]
             #correlation, p_value = pearsonr(x,y)
             correlation, p_value = spearmanr(x,y)
-            correlations.append(abs(correlation))
+            correlations.append(correlation)
 
-        # Scale the correlations
+        # # Scale the correlations
         correlations = np.array(correlations)
-        scaler = pp.MinMaxScaler((0,1))
-        correlations = scaler.fit_transform(correlations)
+
+        # Normalize - Find the sum and divide by it
+        # sum = np.sum(correlations)
+        # correlations = correlations / sum
+
+        sum = np.sum(correlations)
+        correlations = correlations / sum
+
+        #scaler = pp.MinMaxScaler((-1,1))
+        #correlations = scaler.fit_transform(correlations)
+
+        #norm = np.linalg.norm(correlations)
+        #correlations = correlations / norm
+
+
 
         # Re-shape
         correlations = correlations.reshape((1, featureVectors.shape[1]))
@@ -567,8 +1039,8 @@ class SeriesUtility:
                                 outputData=targetVectors,
                                 inputWeightRandom=inputWeightMatrix,
                                 reservoirWeightRandom=reservoirWeightMatrix,
-                                activationFunction=esn.ActivationFunction.EXPIT,
-                                outputRelu=True)
+                                reservoirActivationFunction=act.LogisticFunction(),
+                                outputActivationFunction=act.ReLU())
 
         network.trainReservoir()
 
@@ -579,7 +1051,7 @@ class SeriesUtility:
         predictedSeries = self.predict(network, availableSeries, arbitraryDepth, horizon, featureIndices)
         return predictedSeries
 
-    def predict(self, network, availableSeries, arbitraryDepth, horizon, featureIndices):
+    def predictI(self, network, availableSeries, arbitraryDepth, horizon, featureIndices):
         # To avoid mutation of pandas series
         initialSeries = pd.Series(data=availableSeries.values, index=availableSeries.index)
         for i in range(horizon):
@@ -588,6 +1060,24 @@ class SeriesUtility:
 
             #Append bias
             feature = np.hstack((1.0,feature[0, :])).reshape((1, feature.shape[1]+1))
+
+            nextPoint = network.predictOnePoint(feature)[0]
+
+            nextIndex = initialSeries.last_valid_index() + pd.Timedelta(hours=1)
+            initialSeries[nextIndex] = nextPoint
+
+        predictedSeries = initialSeries[-horizon:]
+        return predictedSeries
+
+    def predictHierarchy(self, network, availableSeries, arbitraryDepth, horizon, featureIndices):
+        # To avoid mutation of pandas series
+        initialSeries = pd.Series(data=availableSeries.values, index=availableSeries.index)
+        for i in range(horizon):
+            feature = initialSeries.values[-arbitraryDepth:].reshape((1, arbitraryDepth))
+            #feature = feature[:, featureIndices]
+
+            #Append bias
+            #feature = np.hstack((1.0,feature[0, :])).reshape((1, feature.shape[1]+1))
 
             nextPoint = network.predictOnePoint(feature)[0]
 
@@ -622,13 +1112,12 @@ class SeriesUtility:
 
     def getBestFeatures(self, trainingSeries, validationSeries, networkParameters, method, args={}):
 
-        # Form the feature vectors to an arbitrary large depth
-        maxDepth = networkParameters['arbitraryDepth']
+        # # # Form the feature vectors to an arbitrary large depth
         horizon = validationSeries.values.shape[0]
-        featureVectors, targetVectors = self.formContinousFeatureAndTargetVectorsWithoutBias(trainingSeries, maxDepth)
-
-        # Calculate the correlation coefficients
-        correlationCoefficients = self.getCorrelationCoefficients(featureVectors, targetVectors)
+        # # featureVectors, targetVectors = self.formContinousFeatureAndTargetVectorsWithoutBias(trainingSeries, maxDepth)
+        #
+        # # Calculate the correlation coefficients
+        # correlationCoefficients = self.getCorrelationCoefficients(featureVectors, targetVectors)
 
         if(method == FeatureSelectionMethod.CutOff_Threshold):
             # Now, vary the cut-off threshold and get the features and choose the best one
@@ -665,7 +1154,7 @@ class SeriesUtility:
             bestTarget = None
             bestError = np.inf
             bestR2score = -1.0
-            depthRange = np.arange(30*24, 150*24, 30*24).tolist()
+            depthRange = np.arange(30*24, 120*24, 30*24).tolist()
             for depth in depthRange:
                 featureVectors, targetVectors = self.formContinousFeatureAndTargetVectorsWithoutBias(trainingSeries, depth)
 

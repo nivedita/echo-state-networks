@@ -1,13 +1,13 @@
 import numpy as np
 from sklearn.metrics import mean_squared_error, r2_score
-# class RootMeanSquareError:
-#     def compute(self, actual, predicted):
-#         N, D = actual.shape
-#         error = 0
-#         for d in range(D):
-#             error += (np.sum((actual[:N, d] - predicted[:N, d]) **2) / float(N)) ** 0.5
-#         error = error / float(D)
-#         return error
+class RootMeanSquareError:
+    def compute(self, actual, predicted):
+        N, D = actual.shape
+        error = 0
+        for d in range(D):
+            error += (np.sum((actual[:N, d] - predicted[:N, d]) **2) / float(N)) ** 0.5
+        error = error / float(D)
+        return error
 
 # class RootMeanSquareError:
 #     def compute(self, actual, predicted):

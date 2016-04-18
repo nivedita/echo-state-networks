@@ -135,6 +135,7 @@ def tuneTrainPredict(trainingInputData, trainingOutputData, validationOutputData
     error = cumError/times
     return predictedOutputData, error
 
+
 def tuneTrainPredictConnectivity(trainingInputData, trainingOutputData, validationOutputData,
                                             initialInputSeedForValidation, horizon, size=256,initialTransient=50,
                                             resTopology = Topology.Random):

@@ -7,7 +7,7 @@ import numpy as np
 
 # Dataset
 directoryName = "Datasets/"
-profileName = "Aston-Martin"
+profileName = "Kia"
 datasetFileName = directoryName + profileName + "_time_interaction.csv"
 
 # Horizon - used to split the training and testing

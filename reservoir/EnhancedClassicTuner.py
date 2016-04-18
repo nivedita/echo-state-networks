@@ -91,13 +91,13 @@ class ReservoirParameterTuner:
         regressionError = errorFunction.compute(self.validationOutputData, predictedOutputData)
 
         #Return the error
-        #print("\nThe Parameters: "+str(x)+" Regression error:"+str(regressionError))
+        print("\nThe Parameters: "+str(x)+" Regression error:"+str(regressionError))
         return regressionError
 
     def __tune__(self):
         if self.minimizer == Minimizer.DifferentialEvolution:
             bounds = [self.spectralRadiusBound, self.inputScalingBound, self.reservoirScalingBound, self.leakingRateBound]
-            result = optimize.differential_evolution(self.__reservoirTrain__,bounds=bounds)
+            result = optimize.differential_evolution(self.__reservoirTrain__,bounds=bounds, maxiter=20)
             print("The Optimization results are :"+str(result))
             return result.x[0], result.x[1], result.x[2], result.x[3]
         else:

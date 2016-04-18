@@ -1,6 +1,5 @@
 from utility import Utility
 from datetime import datetime
-from performance import ErrorMetrics as metrics
 import pandas as pd
 from timeseries import TimeSeriesInterval as tsi
 import numpy as np
@@ -58,7 +57,8 @@ networkSize = int(featureTrainingVectors.shape[0]/10)
 #networkSize = 1000
 util.trainESNWithoutTuning(size=networkSize, featureVectors=featureTrainingVectors, targetVectors=targetTrainingVectors,
                             initialTransient=50, inputConnectivity=1.0, reservoirConnectivity=0.3,
-                            inputScaling=0.5, reservoirScaling=0.5, spectralRadius=0.79, leakingRate=0.26)
+                            inputScaling=0.5, reservoirScaling=0.5, spectralRadius=0.79, leakingRate=0.26,
+                            learningMethod=Utility.LearningMethod.Online)
 
 
 # Step 8 - Predict the future

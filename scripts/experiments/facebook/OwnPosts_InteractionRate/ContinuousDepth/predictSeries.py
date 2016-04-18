@@ -6,10 +6,10 @@ from performance import ErrorMetrics as metrics
 
 #Get the commamd line arguments
 directoryName = "Datasets/"
-profileName = "Ferrari"
+profileName = "BMW"
 datasetFileName = directoryName + profileName + "_time_interaction.csv"
 
-daysOfHorizon = 10
+daysOfHorizon = 14
 daysOfDepth = 30
 horizon = 24*daysOfHorizon#7 days ahead
 depth = 24*daysOfDepth #30 days
@@ -41,10 +41,10 @@ featureTrainingVectors, targetTrainingVectors = util.formContinousFeatureAndTarg
 
 
 # Step 6 - Train the network
-networkSize = 2000
+networkSize = int(featureTrainingVectors.shape[0]/10)
 util.trainESNWithoutTuning(size=networkSize, featureVectors=featureTrainingVectors, targetVectors=targetTrainingVectors,
-                            initialTransient=50, inputConnectivity=1.0, reservoirConnectivity=1.0,
-                            inputScaling=0.0, reservoirScaling=0.0, spectralRadius=0.79, leakingRate=0.30)
+                            initialTransient=50, inputConnectivity=0.7, reservoirConnectivity=0.3,
+                            inputScaling=0.5, reservoirScaling=0.5, spectralRadius=0.79, leakingRate=0.30)
 
 # Step 7 - Predict the future
 predictedSeries = util.predictFuture(trainingSeries, depth, horizon)

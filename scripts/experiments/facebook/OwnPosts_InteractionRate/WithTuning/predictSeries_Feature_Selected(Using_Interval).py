@@ -1,29 +1,15 @@
 from utility import Utility
 from datetime import datetime
-import pandas as pd
-from timeseries import TimeSeriesInterval as tsi
-import numpy as np
-
-# Network Parameters
-networkParameters = {}
-networkParameters['size'] = 2000
-networkParameters['initialTransient'] = 50
-networkParameters['spectralRadius'] = 0.79
-networkParameters['inputScaling'] = 0.5
-networkParameters['reservoirScaling'] = 0.5
-networkParameters['leakingRate'] = 0.3
-networkParameters['inputConnectivity'] = 0.7
-networkParameters['reservoirConnectivity'] = 0.1
-networkParameters['arbitraryDepth'] = 24 * 90 # Depth of 1 year
 
 # Dataset
 directoryName = "Datasets/"
 profileName = "Jeep"
 datasetFileName = directoryName + profileName + "_time_interaction_rate.csv"
 
-# Horizon - used to split the training and testing
-daysOfHorizon = 14 # 10 days ahead
-horizon = 24*daysOfHorizon
+daysOfHorizon = 14
+daysOfDepth = 30
+horizon = 24*daysOfHorizon#14 days ahead
+depth = 24*daysOfDepth #30 days
 util = Utility.SeriesUtility()
 
 # Step 1 - Convert the dataset into pandas series
@@ -53,7 +39,7 @@ bestFeaturesIndices, bestFeatures, targetVectors = util.getBestFeatures(training
 
 
 # Step 7 - Train the network
-util.trainESNWithoutTuning(size=networkParameters['size'], featureVectors=bestFeatures, targetVectors=targetVectors,
+util.trainESNWithCorrelationTuned(size=networkParameters['size'], featureVectors=bestFeatures, targetVectors=targetVectors,
                            initialTransient=networkParameters['initialTransient'],
                            inputConnectivity=networkParameters['inputConnectivity'], reservoirConnectivity=networkParameters['reservoirConnectivity'],
                            inputScaling=networkParameters['inputScaling'], reservoirScaling=networkParameters['reservoirScaling'],

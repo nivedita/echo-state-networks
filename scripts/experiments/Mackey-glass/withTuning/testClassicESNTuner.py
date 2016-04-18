@@ -37,11 +37,12 @@ actualOutputData = minMax.inverse_transform(testingData)[:,0]
 # Initial seed
 initialSeedForValidation = trainingData[-1]
 
-predictedOutputData = util.tuneTrainPredict(trainingInputData=trainingInputData,
+predictedOutputData, error = util.tuneTrainPredict(trainingInputData=trainingInputData,
                                             trainingOutputData=trainingOutputData,
                                             validationOutputData=validationData,
                                             initialInputSeedForValidation=initialSeedForValidation,
-                                            horizon=nTesting
+                                            testingData=actualOutputData,
+                                            size=500
                                             )
 
 
