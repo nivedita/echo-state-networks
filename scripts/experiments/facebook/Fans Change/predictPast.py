@@ -29,14 +29,14 @@ normalizedSeries = util.scaleSeries(resampledSeries)
 del resampledSeries
 
 # Step 4 - Form feature and target vectors
-depth = 30
+depth = 60
 featureVectors, targetVectors = util.formContinousFeatureAndTargetVectors(normalizedSeries, depth)
 
 n = featureVectors.shape[0]
 
 
 # Input-to-reservoir fully connected
-size = 1000
+size = 100
 inputWeight = topology.ClassicInputTopology(inputSize=featureVectors.shape[1], reservoirSize=size).generateWeightMatrix()
 
 # Reservoir-to-reservoir fully connected
@@ -45,9 +45,9 @@ reservoirWeight = topology.ClassicReservoirTopology(size=size).generateWeightMat
 res = ESN.Reservoir(size=size,
                     inputData=featureVectors,
                     outputData=targetVectors,
-                    spectralRadius=1.1,
-                    inputScaling=0.69,
-                    reservoirScaling=0.31,
+                    spectralRadius=0.79,
+                    inputScaling=0.5,
+                    reservoirScaling=0.5,
                     leakingRate=0.78,
                     initialTransient=0,
                     inputWeightRandom=inputWeight,

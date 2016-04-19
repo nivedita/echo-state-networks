@@ -70,7 +70,7 @@ class RandomNetworkErrorObjective():
 
         # Return the error
         #print("Connectivity: "+str(reservoirConnectivity) + "Error: "+str(regressionError))
-        return regressionError
+        return regressionError, network
 
 
 class RandomGraphTuner:
@@ -131,12 +131,6 @@ class RandomGraphTuner:
         # Return the best population and their error values
         population = self.optimizer.getBestParameters(self.noOfBest)
         return population
-
-
-
-
-
-
 
 
 class ErdosRenyiNetworkErrorObjective():
@@ -204,7 +198,7 @@ class ErdosRenyiNetworkErrorObjective():
 
         # Return the error
         #print("Probability: "+str(probability) + "Error: "+str(regressionError))
-        return regressionError
+        return regressionError, network
 
 class ErdosRenyiTuner:
     def __init__(self, size, initialTransient, trainingInputData, trainingOutputData,
@@ -334,7 +328,7 @@ class ScaleFreeNetworkErrorObjective():
 
         # Return the error
         #print("Attachment: "+str(attachment) + "Error: "+str(regressionError))
-        return regressionError
+        return regressionError, network
 
 class ScaleFreeNetworksTuner:
     def __init__(self, size, initialTransient, trainingInputData, trainingOutputData,
@@ -462,7 +456,7 @@ class SmaleWorldGraphsErrorObjective():
 
         # Return the error
         #print("SMG parameters: "+str(x) + "Error: "+str(regressionError))
-        return regressionError
+        return regressionError, network
 
 class SmallWorldNetworksTuner:
     def __init__(self, size, initialTransient, trainingInputData, trainingOutputData,

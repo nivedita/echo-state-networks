@@ -309,9 +309,9 @@ class SeriesUtility:
         return series.resample(rule=samplingRule, how=self._mean)
 
     def scaleSeries(self, series):
-        self.scalingFunction = pp.MinMaxScaler((0,1))
+        #self.scalingFunction = pp.MinMaxScaler((0,1))
         #self.scalingFunction = pp.MinMaxScaler((-1,1))
-        #self.scalingFunction = pp.StandardScaler()
+        self.scalingFunction = pp.StandardScaler()
         data = series.values
         data = self.scalingFunction.fit_transform(data)
         scaledSeries = pd.Series(data=data,index=series.index)
@@ -771,6 +771,19 @@ class SeriesUtility:
         predictedSeries = initialSeries[-horizon:]
         return predictedSeries
 
+    def predictLR(self, model, availableSeries, arbitraryDepth, horizon):
+        # To avoid mutation of pandas series
+        initialSeries = pd.Series(data=availableSeries.values, index=availableSeries.index)
+        for i in range(horizon):
+            feature = initialSeries.values[-arbitraryDepth:].reshape((1, arbitraryDepth))
+
+            nextPoint = model.predict(feature)[0]
+
+            nextIndex = initialSeries.last_valid_index() + pd.Timedelta(days=1)
+            initialSeries[nextIndex] = nextPoint
+
+        predictedSeries = initialSeries[-horizon:]
+        return predictedSeries
 
 
     def predictFuture(self, availableSeries, depth, horizon):

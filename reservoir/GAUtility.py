@@ -217,40 +217,12 @@ def getNetworkStats(bestPopulation, type, size):
 
     log = []
     for item in bestPopulation:
-
-        averageDegree = 0.0
-        averagePathLength = 0.0
-        averageDiameter = 0.0
-        averageClusteringCoefficient = 0.0
-
-        # Run many times to get the average stats
-        times = 1
-        for i in range(times):
-
-            if(type == Topology.Random):
-                connectivity = item[0][0,0]
-                network = topology.RandomReservoirTopology(size=size, connectivity=connectivity)
-            elif(type == Topology.ErdosRenyi):
-                probability = item[0][0,0]
-                network = topology.ErdosRenyiTopology(size=size, probability=probability)
-            elif(type == Topology.ScaleFreeNetworks):
-                attachment = int(item[0][0,0])
-                network = topology.ScaleFreeNetworks(size=size, attachmentCount=attachment)
-            elif(type == Topology.SmallWorldGraphs):
-                meanDegree = item[0][0,0]
-                beta = item[0][1,0]
-                network = topology.SmallWorldGraphs(size=size, meanDegree=meanDegree, beta=beta)
-
-            averageDegree += network.networkStats.getAverageDegree()
-            averagePathLength += network.networkStats.getAveragePathLenth()
-            averageDiameter += network.networkStats.getDiameter()
-            averageClusteringCoefficient += network.networkStats.getAverageClusteringCoefficient()
-
+        network = item[2]
         stats = {}
-        stats["averageDegree"] = averageDegree/times
-        stats["averagePathLength"] = averagePathLength/times
-        stats["averageDiameter"] = averageDiameter/times
-        stats["averageClusteringCoefficient"] = averageClusteringCoefficient/times
+        stats["averageDegree"] = network.networkStats.getAverageDegree()
+        stats["averagePathLength"] = network.networkStats.getAveragePathLenth()
+        stats["averageDiameter"] = network.networkStats.getDiameter()
+        stats["averageClusteringCoefficient"] = network.networkStats.getAverageClusteringCoefficient()
 
         log.append((item[0], item[1], stats))
     return log
