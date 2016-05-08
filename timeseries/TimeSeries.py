@@ -31,7 +31,9 @@ class TimeSeriesProcessor:
             index += 1
             dataCount += 1
 
-        return processedData
+        featureVectors = processedData[:,:self.depth]
+        targetVectors = processedData[:,self.depth:]
+        return featureVectors, targetVectors
 
     def getProcessedData(self):
         return self.__generate__()

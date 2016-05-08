@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-from timeseries import TimeSeriesContinuousProcessor as processor, TimeSeriesInterval as tsi
+from timeseries import TimeSeriesContinuousProcessor as processor, TimeSeriesInterval as tsi, TimeSeries as InOrderProcessor
 from reservoir import classicESN as esn, onlineESNWithRLS as onlineESN, ReservoirTopology as topology, ActivationFunctions as act
 from sklearn import preprocessing as pp
 import os
@@ -17,6 +17,10 @@ class Minimizer(Enum):
     BasinHopping = 1
     DifferentialEvolution = 2
     BruteForce = 3
+
+class OutlierDetectionMethod(Enum):
+    StandardDeviation = 1
+    MedianAbsoluteDeviation = 2
 
 class FeatureSelectionMethod:
     CutOff_Threshold = 1
@@ -278,6 +282,12 @@ class SeriesUtility:
         else:
             return sum(x)
 
+    def _exist(self, x):
+        if len(x) == 0:
+            return 0
+        else:
+            return x
+
     def _exists(self, x):
         if len(x) == 0:
             return 0
@@ -302,6 +312,9 @@ class SeriesUtility:
     def resampleSeriesSum(self, series, samplingRule):
         return series.resample(rule=samplingRule, how=self._sum)
 
+    def resampleSeriesExist(self, series, samplingRule):
+        return series.resample(rule=samplingRule, how=self._exist)
+
     def resampleSeriesBinary(self, series, samplingRule):
         return series.resample(rule=samplingRule, how=self._binary)
 
@@ -310,8 +323,8 @@ class SeriesUtility:
 
     def scaleSeries(self, series):
         #self.scalingFunction = pp.MinMaxScaler((0,1))
-        #self.scalingFunction = pp.MinMaxScaler((-1,1))
-        self.scalingFunction = pp.StandardScaler()
+        self.scalingFunction = pp.MinMaxScaler((-1,1))
+        #self.scalingFunction = pp.StandardScaler()
         data = series.values
         data = self.scalingFunction.fit_transform(data)
         scaledSeries = pd.Series(data=data,index=series.index)
@@ -325,6 +338,43 @@ class SeriesUtility:
         data = self.scalingFunction.fit_transform(data)
         scaledSeries = pd.Series(data=data,index=series.index)
         return scaledSeries
+
+
+    def detectAndRemoveOutliers(self, series, detectionMethod=OutlierDetectionMethod.StandardDeviation, threshold=3):
+
+        data = series.values.flatten()
+
+        if(detectionMethod == OutlierDetectionMethod.StandardDeviation):
+            mean = np.mean(data)
+            std = np.std(data)
+            deviation = abs(data - mean)
+            data[deviation > (threshold * std)] = 1
+            data[deviation <= (threshold * std)] = 0
+        elif(detectionMethod == OutlierDetectionMethod.MedianAbsoluteDeviation):
+            median = np.median(data)
+            mad = np.median(np.abs(data-median))
+            deviation = abs(data - median)
+            data[deviation > (threshold * mad)] = 1
+            data[deviation <= (threshold * mad)] = 0
+
+        # Masked outlier series
+        outlierSeries = pd.Series(data=data, index=series.index)
+
+        # Correct the series by handling outliers
+        correctedValues = []
+        for index, value in series.iteritems():
+            if(outlierSeries[index] == 1):
+                # If it is outlier, then correct it with the last week's value
+                correctedValue = series[index + pd.Timedelta(days=-7)]
+                correctedValues.append(correctedValue)
+            else:
+                correctedValues.append(value)
+
+
+        # Return the corrected series
+        correctedSeries = pd.Series(data=np.array(correctedValues), index=series.index)
+        return correctedSeries
+
 
     def descaleSeries(self, series):
         data = series.values
@@ -367,20 +417,45 @@ class SeriesUtility:
         # Feature list
         featureIntervalList = []
         for i in range(depth, 0, -1):
-            interval = pd.Timedelta(hours=-(i))
+            interval = pd.Timedelta(days=-(i))
             featureIntervalList.append(interval)
 
         # Target vectors
-        targetIntervalList = [pd.Timedelta(hours=0)]
+        targetIntervalList = [pd.Timedelta(days=0)]
 
         # Pre-process the data and form feature and target vectors
         tsp = tsi.TimeSeriesIntervalProcessor(series, featureIntervalList, targetIntervalList)
         featureVectors, targetVectors = tsp.getProcessedData()
 
         # Append bias to feature vectors
-        featureVectors = np.hstack((np.ones((featureVectors.shape[0], 1)), featureVectors))
+        #featureVectors = np.hstack((np.ones((featureVectors.shape[0], 1)), featureVectors))
 
         return featureVectors, targetVectors
+
+
+    def formFeatureAndTargetVectorsMultiHorizon(self, series, depth, horizon):
+        # Feature list
+        featureIntervalList = []
+        for i in range(depth, 0, -1):
+            interval = pd.Timedelta(days=-(i))
+            featureIntervalList.append(interval)
+
+        # Target vectors
+        targetIntervalList = []
+        for i in range(0,horizon,1):
+            interval = pd.Timedelta(days=i)
+            targetIntervalList.append(interval)
+
+
+        # Pre-process the data and form feature and target vectors
+        tsp = tsi.TimeSeriesIntervalProcessor(series, featureIntervalList, targetIntervalList)
+        featureVectors, targetVectors = tsp.getProcessedData()
+
+        # Append bias to feature vectors
+        #featureVectors = np.hstack((np.ones((featureVectors.shape[0], 1)), featureVectors))
+
+        return featureVectors, targetVectors
+
 
     def formFeatureAndTargetVectorsInterval(self, series, depth, period):
         # Feature list
@@ -412,9 +487,26 @@ class SeriesUtility:
 
         return featureVectors, targetVectors
 
+    def formContinousFeatureAndTargetVectorsInOrder(self, series, depth):
+        # Pre-process the data and form feature and target vectors
+        tsp = InOrderProcessor.TimeSeriesProcessor(series, depth, horizon=1)
+        featureVectors, targetVectors = tsp.getProcessedData()
+
+        # Append bias to feature vectors
+        featureVectors = np.hstack((np.ones((featureVectors.shape[0], 1)), featureVectors))
+
+        return featureVectors, targetVectors
+
     def formContinousFeatureAndTargetVectorsWithoutBias(self, series, depth):
         # Pre-process the data and form feature and target vectors
         tsp = processor.TimeSeriesContinuosProcessor(series, depth, horizon=1)
+        featureVectors, targetVectors = tsp.getProcessedData()
+
+        return featureVectors, targetVectors
+
+    def formContinousFeatureAndTargetVectorsWithoutBiasInOrder(self, series, depth):
+        # Pre-process the data and form feature and target vectors
+        tsp = InOrderProcessor.TimeSeriesProcessor(series, depth, horizon=1)
         featureVectors, targetVectors = tsp.getProcessedData()
 
         return featureVectors, targetVectors
@@ -937,6 +1029,7 @@ class SeriesUtility:
             outplot.setSeries(seriesNameList[i], np.array(xAxis), series.values)
         outplot.createOutput()
 
+
     def plotCombinedSeries(self, folderName, seriesList, seriesNameList, title, subTitle, yAxisText, fileName="Prediction.html"):
         os.mkdir(folderName)
         outplot = combPlotting.TimeSeriesLineBarPlot(folderName + "/" + fileName, title, subTitle, yAxisText)
@@ -1005,16 +1098,14 @@ class SeriesUtility:
         # sum = np.sum(correlations)
         # correlations = correlations / sum
 
-        sum = np.sum(correlations)
-        correlations = correlations / sum
+        #sum = np.sum(correlations)
+        #correlations = correlations / sum
 
         #scaler = pp.MinMaxScaler((-1,1))
         #correlations = scaler.fit_transform(correlations)
 
-        #norm = np.linalg.norm(correlations)
-        #correlations = correlations / norm
-
-
+        norm = np.linalg.norm(correlations)
+        correlations = correlations / norm
 
         # Re-shape
         correlations = correlations.reshape((1, featureVectors.shape[1]))

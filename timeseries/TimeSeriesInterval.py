@@ -37,7 +37,7 @@ class TimeSeriesIntervalProcessor:
                     valueAtInterval = self.series[index+interval]
                     target.append(valueAtInterval)
                 else:
-                    missingTarget = False
+                    missingTarget = True
                     break
 
 

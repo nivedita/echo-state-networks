@@ -24,13 +24,16 @@ series = util.convertDatasetsToSeries(datasetFileName)
 resampledSeries = util.resampleSeriesSum(series, "D")
 del series
 
+# Remove the outliers
+resampledSeries = util.detectAndRemoveOutliers(resampledSeries)
+
 # Step 3 - Rescale the series
-normalizedSeries = util.scaleSeries(resampledSeries)
+normalizedSeries = util.scaleSeriesStandard(resampledSeries)
 del resampledSeries
 
 # Step 4 - Form feature and target vectors
-depth = 60
-featureVectors, targetVectors = util.formContinousFeatureAndTargetVectors(normalizedSeries, depth)
+depth = 1
+featureVectors, targetVectors = util.formContinousFeatureAndTargetVectorsInOrder(normalizedSeries, depth)
 
 n = featureVectors.shape[0]
 
@@ -40,15 +43,16 @@ size = 100
 inputWeight = topology.ClassicInputTopology(inputSize=featureVectors.shape[1], reservoirSize=size).generateWeightMatrix()
 
 # Reservoir-to-reservoir fully connected
-reservoirWeight = topology.ClassicReservoirTopology(size=size).generateWeightMatrix()
+#reservoirWeight = topology.ClassicReservoirTopology(size=size).generateWeightMatrix()
+reservoirWeight = topology.SmallWorldGraphs(size=size, meanDegree=int(size/2), beta=0.8).generateWeightMatrix()
 
 res = ESN.Reservoir(size=size,
                     inputData=featureVectors,
                     outputData=targetVectors,
-                    spectralRadius=0.79,
-                    inputScaling=0.5,
+                    spectralRadius=1.5,
+                    inputScaling=0.1,
                     reservoirScaling=0.5,
-                    leakingRate=0.78,
+                    leakingRate=0.7,
                     initialTransient=0,
                     inputWeightRandom=inputWeight,
                     reservoirWeightRandom=reservoirWeight)
@@ -57,19 +61,19 @@ res.trainReservoir()
 #Warm up
 predictedTrainingOutputData = res.predict(featureVectors)
 
+predictedSeries = pd.Series(data=predictedTrainingOutputData.flatten(), index=normalizedSeries.index[-predictedTrainingOutputData.shape[0]:])
 
-error = metrics.RootMeanSquareError().compute(targetVectors, predictedTrainingOutputData)
-print("Regression error:"+str(error))
+predictedSeries = util.descaleSeries(predictedSeries)
+actualSeries = util.descaleSeries(normalizedSeries)
 
-#Plotting of the prediction output and error
-outputFolderName = "Outputs/Outputs" + datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
-os.mkdir(outputFolderName)
-outplot = outputPlot.OutputPlot(outputFolderName + "/Prediction.html", "Facebook Fans Change - Classic ESN", "Taylor Swift", "Time", "Output")
-outplot.setXSeries(np.arange(1, n + 1))
-outplot.setYSeries('Actual Output', targetVectors[:,0])
-outplot.setYSeries('Predicted Output', predictedTrainingOutputData[:, 0])
-outplot.createOutput()
-print("Done!")
+# Step 9 - Plot the results
+details = profileName + "_depth_" + str(depth) + "_network_size_" + str(size)
+util.plotSeries("Outputs/Outputs_" + str(datetime.now()) + details,
+                [actualSeries, predictedSeries], ["Actual Series", "Predicted Series"], "Facebook Fans Change - "+profileName, "Fans Change")
+
+
+
+
 
 
 

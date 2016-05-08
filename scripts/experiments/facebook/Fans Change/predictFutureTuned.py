@@ -17,8 +17,8 @@ datasetFileName = directoryName + profileName + ".csv"
 
 
 # Forecasting parameters
-depth = 7
-horizon = 30
+depth = 1
+horizon = 7
 
 util = Utility.SeriesUtility()
 
@@ -29,8 +29,11 @@ series = util.convertDatasetsToSeries(datasetFileName)
 resampledSeries = util.resampleSeriesSum(series, "D")
 del series
 
+# Remove the outliers
+resampledSeries = util.detectAndRemoveOutliers(resampledSeries)
+
 # Step 3 - Rescale the series
-normalizedSeries = util.scaleSeries(resampledSeries)
+normalizedSeries = util.scaleSeriesStandard(resampledSeries)
 del resampledSeries
 
 # Step 4 - Split the data into training and testing series
@@ -46,8 +49,6 @@ inputWeight = topology.ClassicInputTopology(inputSize=featureVectors.shape[1], r
 
 # Reservoir-to-reservoir fully connected
 reservoirWeight = topology.ClassicReservoirTopology(size=size).generateWeightMatrix()
-
-
 
 # Tune the reservoir
 tuner = eutil.ReservoirParameterTuner(size=size,

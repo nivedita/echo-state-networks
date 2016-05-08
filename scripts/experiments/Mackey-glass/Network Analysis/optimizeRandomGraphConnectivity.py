@@ -36,9 +36,9 @@ actualOutputData = minMax.inverse_transform(testingData)[:,0]
 # Initial seed
 initialSeedForValidation = trainingData[-1]
 networkSize = 500
-populationSize = 10
+populationSize = 200
 noOfBest = int(populationSize/2)
-noOfGenerations = 10
+noOfGenerations = 100
 predictedOutputData, bestPopulation = utilityGA.tuneTrainPredictConnectivityGA(trainingInputData=trainingInputData,
                                                                                trainingOutputData=trainingOutputData,
                                                                                validationOutputData=validationData,

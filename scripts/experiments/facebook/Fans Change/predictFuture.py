@@ -16,8 +16,8 @@ datasetFileName = directoryName + profileName + ".csv"
 
 
 # Forecasting parameters
-depth = 60
-horizon = 14
+depth = 1
+horizon = 7
 
 util = Utility.SeriesUtility()
 
@@ -28,19 +28,25 @@ series = util.convertDatasetsToSeries(datasetFileName)
 resampledSeries = util.resampleSeriesSum(series, "D")
 del series
 
+# Remove the outliers
+resampledSeries = util.detectAndRemoveOutliers(resampledSeries)
+
 # Step 3 - Rescale the series
-normalizedSeries = util.scaleSeries(resampledSeries)
+normalizedSeries = util.scaleSeriesStandard(resampledSeries)
 del resampledSeries
 
 # Step 4 - Split the data into training and testing series
 trainingSeries, testingSeries = util.splitIntoTrainingAndTestingSeries(normalizedSeries, horizon)
 
 # Step 4 - Form feature and target vectors
-featureVectors, targetVectors = util.formContinousFeatureAndTargetVectorsWithoutBias(trainingSeries, depth)
+featureVectors, targetVectors = util.formContinousFeatureAndTargetVectors(trainingSeries, depth)
 
 # Input-to-reservoir fully connected
-size = 1000
-inputWeight = topology.ClassicInputTopology(inputSize=featureVectors.shape[1], reservoirSize=size).generateWeightMatrix()
+size = 2000
+inputConnMatrix = topology.RandomInputTopology(inputSize=featureVectors.shape[1], reservoirSize=size, inputConnectivity=0.7).generateConnectivityMatrix()
+correlationMatrix = util.getCorrelationMatrix(featureVectors, targetVectors, size)
+inputWeightMatrix = inputConnMatrix * correlationMatrix
+
 
 # Reservoir-to-reservoir fully connected
 reservoirWeight = topology.RandomReservoirTopology(size=size, connectivity=0.4).generateWeightMatrix()
@@ -48,12 +54,12 @@ reservoirWeight = topology.RandomReservoirTopology(size=size, connectivity=0.4).
 res = ESN.Reservoir(size=size,
                     inputData=featureVectors,
                     outputData=targetVectors,
-                    spectralRadius=0.1,
-                    inputScaling=0.69,
-                    reservoirScaling=0.05,
-                    leakingRate=0.60,
+                    spectralRadius=0.85,
+                    inputScaling=0.0019,
+                    reservoirScaling=0.07,
+                    leakingRate=0.17,
                     initialTransient=0,
-                    inputWeightRandom=inputWeight,
+                    inputWeightRandom=inputWeightMatrix,
                     reservoirWeightRandom=reservoirWeight)
 res.trainReservoir()
 

@@ -44,7 +44,8 @@ class ErrorPlot:
         self.f.write("\n$(function () {")
         self.f.write("\n$('#container').highcharts({")
         self.f.write("\nchart: {")
-        self.f.write("\n    type: 'bar'")
+        self.f.write("\n    type: 'column',")
+        self.f.write("\nzoomType: 'xy'")
         self.f.write("\n},")
         self.f.write("\ntitle: {")
         self.f.write("\n    text: '"+self.title+"'")
@@ -59,7 +60,6 @@ class ErrorPlot:
         self.f.write("\n    }")
         self.f.write("\n},")
         self.f.write("\nyAxis: {")
-        self.f.write("\n    min: 0,")
         self.f.write("\n    title: {")
         self.f.write("\n        text: '"+self.yAxisText+"',")
         self.f.write("\n        align: 'middle'")
@@ -119,5 +119,5 @@ if __name__ == '__main__':
     output.setXAxis(np.array(['With 100', 'With 200', 'With 300']))
 
     #Series data
-    output.setYAxis('Total Regression Error', np.array([107, 31, 635]))
+    output.setYAxis('Total Regression Error', np.array([107, -31, 635]))
     output.createOutput()

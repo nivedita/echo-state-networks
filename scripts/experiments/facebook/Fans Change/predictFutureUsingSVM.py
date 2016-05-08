@@ -22,8 +22,8 @@ datasetFileName = directoryName + profileName + ".csv"
 
 
 # Forecasting parameters
-depth = 60
-horizon = 15
+depth = 7
+horizon = 30
 
 util = Utility.SeriesUtility()
 
@@ -45,8 +45,8 @@ trainingSeries, testingSeries = util.splitIntoTrainingAndTestingSeries(normalize
 featureVectors, targetVectors = util.formContinousFeatureAndTargetVectorsWithoutBias(trainingSeries, depth)
 
 # Train using linear regression
-model = SVR()
-#model = Pipeline([('poly', PolynomialFeatures(degree=2)), ('linear', LinearRegression(fit_intercept=False))])
+#model = SVR()
+model = Pipeline([('poly', PolynomialFeatures(degree=2)), ('linear', LinearRegression(fit_intercept=False))])
 model.fit(featureVectors, targetVectors[:, 0])
 
 predictedTestingOutputData = util.predictLR(model, trainingSeries, depth, horizon)

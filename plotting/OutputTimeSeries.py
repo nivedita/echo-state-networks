@@ -35,6 +35,21 @@ class OutputTimeSeriesPlot:
         #Set the tooltip
         self.seriesToolTip.append(toolTipText)
 
+    def setSeriesWithColorAndRadius(self, name, xData, yData, colorData, radiusData, toolTipText=""):
+        # Set the name
+        self.seriesName.append(name)
+
+        # Set the data
+        dataText = ""
+        for i in range(xData.size):
+            dataText = dataText + "{x:" + str(xData[i]) + ",y:" + str(yData[i]) + ", color:'"+str(colorData[i])+ "', radius:" +str(radiusData[i])+"},"
+        dataText = dataText[0:len(dataText) - 1]
+        self.seriesData.append(dataText)
+
+        #Set the tooltip
+        self.seriesToolTip.append(toolTipText)
+
+
     def createOutput(self):
         # This is where all the html(javascript) file is produced
         self.f.write("\n<script>")
@@ -90,8 +105,11 @@ class OutputTimeSeriesPlot:
         self.f.write("\n                }")
         self.f.write("\n            },")
         self.f.write("\n            threshold: null")
-        self.f.write("\n        }")
+        self.f.write("\n        },")
+        self.f.write("\nseries: {turboThreshold: 0}")
         self.f.write("\n    },")
+
+
 
          #Concatenate series data
         length = len(self.seriesName)
@@ -117,6 +135,7 @@ class OutputTimeSeriesPlot:
 
 if __name__ == '__main__':
     # Test the plotting functions
-    output = OutputTimeSeriesPlot("test.html", "USD to EUR exchange rate over time", "Click and drag in the plot area to zoom in' : 'Pinch the chart to zoom in", "Exchange rate")
-    output.setSeries("USD to EUR", np.array(["Date.UTC(2013,5,2)", "Date.UTC(2013,5,3)", "Date.UTC(2013,5,4)"]), np.array([0.7695, 0.7448, 0.7645]))
+    output = OutputTimeSeriesPlot("test.html", "USD to EUR exchange rate over time", "Click and drag in the plot area to zoom in", "Exchange rate")
+    #output.setSeries("USD to EUR", np.array(["Date.UTC(2013,5,2)", "Date.UTC(2013,5,3)", "Date.UTC(2013,5,4)"]), np.array([0.7695, 0.7448, 0.7645]))
+    output.setSeriesWithColorAndRadius("USD to EUR", np.array(["Date.UTC(2013,5,2)", "Date.UTC(2013,5,3)", "Date.UTC(2013,5,4)"]), np.array([0.7695, -0.7448, 0.7645]), np.array(['', 'red', '']), np.array([4,10,4]))
     output.createOutput()

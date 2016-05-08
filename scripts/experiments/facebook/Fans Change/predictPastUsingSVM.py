@@ -15,7 +15,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.svm import SVR
 
 
-#Get the commamd line arguments
+# Get the commamd line arguments
 directoryName = "Datasets/fans_change_"
 profileName = "taylor_swift"
 datasetFileName = directoryName + profileName + ".csv"
@@ -31,22 +31,34 @@ resampledSeries = util.resampleSeriesSum(series, "D")
 del series
 
 # Step 3 - Rescale the series
-normalizedSeries = util.scaleSeries(resampledSeries)
+normalizedSeries = util.scaleSeriesStandard(resampledSeries)
+actualSeries = normalizedSeries
 del resampledSeries
 
+# Step 4 - Remove the outliers
+normalizedSeries = util.detectAndRemoveOutliers(normalizedSeries)
+
+
 # Step 4 - Form feature and target vectors
-depth = 60
+depth = 100
 featureVectors, targetVectors = util.formContinousFeatureAndTargetVectorsWithoutBias(normalizedSeries, depth)
 n = featureVectors.shape[0]
 
 
 # Train using linear regression
-#model = Pipeline([('poly', PolynomialFeatures(degree=3)), ('Ridge', Ridge(fit_intercept=False, alpha=0.01))])
-#model = Pipeline([('poly', PolynomialFeatures(degree=2)), ('linear', LinearRegression(fit_intercept=False))])
-model = SVR()
+#model = SVR()
+model = Pipeline([('poly', PolynomialFeatures(degree=3)), ('linear', LinearRegression(fit_intercept=False))])
 model.fit(featureVectors, targetVectors[:, 0])
 predictedTrainingOutputData = model.predict(featureVectors)
 
+# Descale
+predictedTrainingOutputData = util.scalingFunction.inverse_transform(predictedTrainingOutputData)
+targetVectors = util.scalingFunction.inverse_transform(targetVectors)
+
+#targetVectors =actualSeries.values.reshape(actualSeries.values.shape[0],1)[depth:]
+
+error = metrics.RootMeanSquareError().compute(targetVectors, predictedTrainingOutputData.reshape(predictedTrainingOutputData.shape[0],1))
+print("Regression error:"+str(error))
 
 
 #Plotting of the prediction output and error

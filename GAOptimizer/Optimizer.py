@@ -41,10 +41,10 @@ class Optimizer:
             chromosome = np.array(chromosome).reshape(1,self.parameterSize)
 
             # Calculate the fitness value
-            fitness, others = self.fitnessObj.evaluate(chromosome)
+            fitness = self.fitnessObj.evaluate(chromosome)
 
             # Add it to the population
-            self.population.append((chromosome, fitness, others))
+            self.population.append((chromosome, fitness))
 
         # Sort em based on the fitness value - for minimization
         self.population = sorted(self.population, key=operator.itemgetter(1))
@@ -54,10 +54,10 @@ class Optimizer:
             if item[1] >= random:
                 return item[0]
 
-    def __addToPopulation(self, population, popUnique, chromosome, fitness, others):
+    def __addToPopulation(self, population, popUnique, chromosome, fitness):
         chromosomeTuple = tuple(chromosome.tolist())
         if(chromosomeTuple not in popUnique):
-            population.append((chromosome, fitness, others))
+            population.append((chromosome, fitness))
             popUnique.append(chromosomeTuple)
 
 
@@ -81,7 +81,7 @@ class Optimizer:
         population = []
         for item in pop:
             fitness = max - item[1]
-            population.append((item[0],fitness, item[2]))
+            population.append((item[0],fitness))
 
         # As this is already sorted, now just have to normalize
         # Find the sum
@@ -94,7 +94,7 @@ class Optimizer:
         for item in population:
             fitness = (item[1]/sum) + previousFitness
             previousFitness = fitness
-            self.rouletteWheel.append((item[0], fitness, item[2]))
+            self.rouletteWheel.append((item[0], fitness))
 
     def optimize(self):
 
@@ -126,20 +126,20 @@ class Optimizer:
                 # Step 3 - Cross over
                 offspring1, offspring2 = self.crossoverOperator(best1, best2)
 
-                fitnessOffspring1, othersOffspring1 = self.fitnessObj.evaluate(offspring1)
-                fitnessOffspring2, othersOffspring2 = self.fitnessObj.evaluate(offspring2)
+                fitnessOffspring1 = self.fitnessObj.evaluate(offspring1)
+                fitnessOffspring2 = self.fitnessObj.evaluate(offspring2)
 
                 # Step 4 - Mutate
                 mutated1 = self.mutationOperator(np.copy(best1), self.mutationRate, self.parameterBounds)
                 mutated2 = self.mutationOperator(np.copy(best2), self.mutationRate, self.parameterBounds)
-                fitnessMutated1, othersMutated1 = self.fitnessObj.evaluate(mutated1)
-                fitnessMutated2, othersMutated2 = self.fitnessObj.evaluate(mutated2)
+                fitnessMutated1 = self.fitnessObj.evaluate(mutated1)
+                fitnessMutated2 = self.fitnessObj.evaluate(mutated2)
 
                 # Step 5 - Add them to the population
-                self.__addToPopulation(newPopulation, popUnique, offspring1, fitnessOffspring1, othersOffspring1)
-                self.__addToPopulation(newPopulation, popUnique, offspring2, fitnessOffspring2, othersOffspring2)
-                self.__addToPopulation(newPopulation, popUnique, mutated1, fitnessMutated1, othersMutated1)
-                self.__addToPopulation(newPopulation, popUnique, mutated2, fitnessMutated2, othersMutated2)
+                self.__addToPopulation(newPopulation, popUnique, offspring1, fitnessOffspring1)
+                self.__addToPopulation(newPopulation, popUnique, offspring2, fitnessOffspring2)
+                self.__addToPopulation(newPopulation, popUnique, mutated1, fitnessMutated1)
+                self.__addToPopulation(newPopulation, popUnique, mutated2, fitnessMutated2)
 
                 # Step 6 - Sort the population based on fitness
             newPopulation = sorted(newPopulation, key=operator.itemgetter(1))

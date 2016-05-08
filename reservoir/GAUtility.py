@@ -1,7 +1,7 @@
 from reservoir import ReservoirTopology as topology, GATuner as tuner, classicESN as esn, GARandomGraphTuner as rgTuner
 import numpy as np
 from enum import Enum
-from plotting import ScatterPlot as plot
+from plotting import ScatterPlot as plot, ErrorPlot as columnPlot
 import pickle
 
 class Topology(Enum):
@@ -217,12 +217,40 @@ def getNetworkStats(bestPopulation, type, size):
 
     log = []
     for item in bestPopulation:
-        network = item[2]
+
+        averageDegree = 0.0
+        averagePathLength = 0.0
+        averageDiameter = 0.0
+        averageClusteringCoefficient = 0.0
+
+        # Run many times to get the average stats
+        times = 1
+        for i in range(times):
+
+            if(type == Topology.Random):
+                connectivity = item[0][0,0]
+                network = topology.RandomReservoirTopology(size=size, connectivity=connectivity)
+            elif(type == Topology.ErdosRenyi):
+                probability = item[0][0,0]
+                network = topology.ErdosRenyiTopology(size=size, probability=probability)
+            elif(type == Topology.ScaleFreeNetworks):
+                attachment = int(item[0][0,0])
+                network = topology.ScaleFreeNetworks(size=size, attachmentCount=attachment)
+            elif(type == Topology.SmallWorldGraphs):
+                meanDegree = item[0][0,0]
+                beta = item[0][1,0]
+                network = topology.SmallWorldGraphs(size=size, meanDegree=meanDegree, beta=beta)
+
+            averageDegree += network.networkStats.getAverageDegree()
+            averagePathLength += network.networkStats.getAveragePathLenth()
+            averageDiameter += network.networkStats.getDiameter()
+            averageClusteringCoefficient += network.networkStats.getAverageClusteringCoefficient()
+
         stats = {}
-        stats["averageDegree"] = network.networkStats.getAverageDegree()
-        stats["averagePathLength"] = network.networkStats.getAveragePathLenth()
-        stats["averageDiameter"] = network.networkStats.getDiameter()
-        stats["averageClusteringCoefficient"] = network.networkStats.getAverageClusteringCoefficient()
+        stats["averageDegree"] = averageDegree/times
+        stats["averagePathLength"] = averagePathLength/times
+        stats["averageDiameter"] = averageDiameter/times
+        stats["averageClusteringCoefficient"] = averageClusteringCoefficient/times
 
         log.append((item[0], item[1], stats))
     return log
@@ -243,3 +271,22 @@ def loadBestPopulation(fileName):
     pkl_file = open(fileName, 'rb')
     bestPopulation = pickle.load(pkl_file)
     return bestPopulation
+
+def plotHistogram(arrayValues, bins, ranges, fileName, title, subTitle, xAxisText, yAxisText, seriesName):
+
+    hist, edges = np.histogram(a=arrayValues, bins=bins, range=ranges)
+    histPlot = columnPlot.ErrorPlot(fileName, title, subTitle, xAxisText, yAxisText)
+
+    # Form the range of the bins
+    xAxisData = []
+    prev = edges[0]
+    for i in range(1, edges.shape[0]):
+        current = edges[i]
+        xAxis = str(prev) + "-" + str(current)
+        xAxisData.append(xAxis)
+        prev = current
+    xAxisData = np.array(xAxisData)
+
+    histPlot.setXAxis(xAxisData)
+    histPlot.setYAxis(seriesName, hist)
+    histPlot.createOutput()
